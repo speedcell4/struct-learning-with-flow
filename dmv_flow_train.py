@@ -1,11 +1,12 @@
 from __future__ import print_function
 
 import argparse
-import numpy as np
 import os
 import pickle
 import sys
 import time
+
+import numpy as np
 import torch
 
 import modules.dmv_flow_model as dmv
@@ -67,8 +68,7 @@ def init_config():
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
-    save_path = "parse_%s_%dlayers_%d_%d" % \
-                (args.model, args.couple_layers, args.jobid, args.taskid)
+    save_path = f'parse_{args.model}_{args.couple_layers:d}layers_{args.jobid:d}_{args.taskid:d}'
     save_path = os.path.join(save_dir, save_path + '.pt')
     args.save_path = save_path
 
@@ -97,30 +97,31 @@ def main(args):
     num_dims = len(train_emb[0][0])
 
     train_tagid, tag2id = sents_to_tagid(train_sents)
-    print('%d types of tags' % len(tag2id))
+    print(f'{len(tag2id):d} types of tags')
     id2tag = {v: k for k, v in tag2id.items()}
 
     pad = np.zeros(num_dims)
     device = torch.device("cuda" if args.cuda else "cpu")
     args.device = device
 
-    model = dmv.DMVFlow(args, id2tag, num_dims).to(device)
+    dmv_flow = dmv.DMVFlow(args, id2tag, num_dims).to(device)
 
     init_seed = to_input_tensor(generate_seed(train_emb, args.batch_size),
                                 pad, device=device)
 
     with torch.no_grad():
-        model.init_params(init_seed, train_tagid, train_emb)
+        dmv_flow.reset_parameters(init_seed, train_tagid, train_emb)
     print('complete init')
 
     if args.train_from != '':
-        model.load_state_dict(torch.load(args.train_from))
+        dmv_flow.load_state_dict(torch.load(args.train_from))
         with torch.no_grad():
-            directed, undirected = model.test(test_deps, test_emb)
-        print('acc on length <= 10: #trees %d, undir %2.1f, dir %2.1f' \
-              % (len(test_deps), 100 * undirected, 100 * directed))
+            directed, undirected = dmv_flow.test(test_deps, test_emb)
+        print(f'acc on length <= 10: #trees {len(test_deps):d}, '
+              f'undir {100 * undirected:2.1f}, '
+              f'dir {100 * directed:2.1f}')
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(dmv_flow.parameters(), lr=args.lr)
 
     log_niter = (len(train_emb) // args.batch_size) // 5
     report_ll = report_num_words = report_num_sents = epoch = train_iter = 0
@@ -132,9 +133,11 @@ def main(args):
     print('begin training')
 
     with torch.no_grad():
-        directed, undirected = model.test(test_deps, test_emb)
-    print('starting acc on length <= 10: #trees %d, undir %2.1f, dir %2.1f' \
-          % (len(test_deps), 100 * undirected, 100 * directed))
+        directed, undirected = dmv_flow.test(test_deps, test_emb)
+    print(
+        f'starting acc on length <= 10: #trees {len(test_deps):d}, '
+        f'undir {100 * undirected:2.1f}, '
+        f'dir {100 * directed:2.1f}')
 
     for epoch in range(args.epochs):
         report_ll = report_num_sents = report_num_words = 0
@@ -145,15 +148,15 @@ def main(args):
             optimizer.zero_grad()
 
             sents_var, masks = to_input_tensor(sents, pad, device)
-            sents_var, _ = model.transform(sents_var)
+            sents_var, _ = dmv_flow.flow_transform(sents_var)
             sents_var = sents_var.transpose(0, 1)
-            log_likelihood = model.p_inside(sents_var, masks)
+            log_likelihood = dmv_flow.p_inside(sents_var, masks)
 
             avg_ll_loss = -log_likelihood / batch_size
 
             avg_ll_loss.backward()
 
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip_grad)
+            torch.nn.utils.clip_grad_norm_(dmv_flow.parameters(), args.clip_grad)
             optimizer.step()
 
             report_ll += log_likelihood.item()
@@ -166,21 +169,23 @@ def main(args):
                 print('epoch %d, iter %d, ll_per_sent %.4f, ll_per_word %.4f, ' \
                       'max_var %.4f, min_var %.4f time elapsed %.2f sec' % \
                       (epoch, train_iter, report_ll / report_num_sents, \
-                       report_ll / report_num_words, model.var.data.max(), \
-                       model.var.data.min(), time.time() - begin_time), file=sys.stderr)
+                       report_ll / report_num_words, dmv_flow.var.data.max(), \
+                       dmv_flow.var.data.min(), time.time() - begin_time), file=sys.stderr)
 
             train_iter += 1
         if epoch % args.valid_nepoch == 0:
             with torch.no_grad():
-                directed, undirected = model.test(test_deps, test_emb)
-            print('\n\nacc on length <= 10: #trees %d, undir %2.1f, dir %2.1f, \n\n' \
-                  % (len(test_deps), 100 * undirected, 100 * directed))
+                directed, undirected = dmv_flow.test(test_deps, test_emb)
+            print(
+                f'\n\nacc on length <= 10: #trees {len(test_deps):d}, '
+                f'undir {100 * undirected:2.1f}, '
+                f'dir {100 * directed:2.1f}, \n\n')
 
         stop_avg_ll = stop_avg_ll / stop_num_words
         rate = (stop_avg_ll - stop_avg_ll_last) / abs(stop_avg_ll_last)
 
-        print('\n\nlikelihood: %.4f, likelihood last: %.4f, rate: %f\n' % \
-              (stop_avg_ll, stop_avg_ll_last, rate))
+        print(f'\n\nlikelihood: {stop_avg_ll:.4f}, '
+              f'likelihood last: {stop_avg_ll_last:.4f}, rate: {rate:f}\n')
 
         if rate < 0.001 and epoch >= 5:
             break
@@ -188,7 +193,7 @@ def main(args):
         stop_avg_ll_last = stop_avg_ll
         stop_avg_ll = stop_num_words = 0
 
-    torch.save(model.state_dict(), args.save_path)
+    torch.save(dmv_flow.state_dict(), args.save_path)
 
     # eval on all lengths
     if args.eval_all:
@@ -197,9 +202,9 @@ def main(args):
         test_emb = sents_to_vec(word_vec, test_sents)
         print("start evaluating on all lengths")
         with torch.no_grad():
-            directed, undirected = model.test(test_deps, test_emb, eval_all=True)
-        print('accuracy on all lengths: number of trees:%d, undir: %2.1f, dir: %2.1f' \
-              % (len(test_gold), 100 * undirected, 100 * directed))
+            directed, undirected = dmv_flow.test(test_deps, test_emb, eval_all=True)
+        print(f'accuracy on all lengths: number of trees:{len(test_gold):d}, '
+              f'undir: {100 * undirected:2.1f}, dir: {100 * directed:2.1f}')
 
 
 if __name__ == '__main__':
