@@ -3,20 +3,13 @@ from __future__ import print_function
 import math
 from collections import Counter
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
 import numpy as np
-
-from torch.nn import Parameter
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from sklearn.metrics.cluster import v_measure_score
+from torch.nn import Parameter
 
-from .utils import log_sum_exp, data_iter, to_input_tensor, \
-                   write_conll
 from .projection import *
-
+from .utils import log_sum_exp, data_iter, to_input_tensor, \
+    write_conll
 
 
 class MarkovFlow(nn.Module):
@@ -28,7 +21,7 @@ class MarkovFlow(nn.Module):
 
         # Gaussian Variance
         self.var = torch.zeros(num_dims, dtype=torch.float32,
-            device=self.device, requires_grad=False)
+                               device=self.device, requires_grad=False)
 
         self.num_state = args.num_state
         self.num_dims = num_dims
@@ -53,7 +46,7 @@ class MarkovFlow(nn.Module):
         self.pi = torch.zeros(self.num_state,
                               dtype=torch.float32,
                               requires_grad=False,
-                              device=self.device).fill_(1.0/self.num_state)
+                              device=self.device).fill_(1.0 / self.num_state)
 
         self.pi = torch.log(self.pi)
 
@@ -87,7 +80,7 @@ class MarkovFlow(nn.Module):
                                   flat_sents, dim=0) / masks.sum()
             seed_var = torch.sum(masks.view(-1, 1).expand_as(flat_sents) *
                                  ((flat_sents - seed_mean.expand_as(flat_sents)) ** 2),
-                                 dim = 0) / masks.sum()
+                                 dim=0) / masks.sum()
             self.var.copy_(seed_var)
 
             # add noise to the pretrained Gaussian mean
@@ -101,8 +94,8 @@ class MarkovFlow(nn.Module):
         # return -self.num_dims/2.0 * (math.log(2) + \
         #         math.log(np.pi)) - 0.5 * self.num_dims * (torch.log(self.var))
 
-        return -self.num_dims/2.0 * (math.log(2) + \
-                math.log(np.pi)) - 0.5 * torch.sum(torch.log(self.var))
+        return -self.num_dims / 2.0 * (math.log(2) + \
+                                       math.log(np.pi)) - 0.5 * torch.sum(torch.log(self.var))
 
     def transform(self, x):
         """
@@ -115,9 +108,7 @@ class MarkovFlow(nn.Module):
             x, jacobian_loss_new = self.nice_layer(x)
             jacobian_loss = jacobian_loss + jacobian_loss_new
 
-
         return x, jacobian_loss
-
 
     def forward(self, sents, masks):
         """
@@ -138,10 +129,10 @@ class MarkovFlow(nn.Module):
         for t in range(1, max_length):
             density = self._eval_density(sents[t])
             mask_ep = masks[t].expand(self.num_state, batch_size) \
-                      .transpose(0, 1)
+                .transpose(0, 1)
             alpha = torch.mul(mask_ep,
                               self._forward_cell(alpha, density)) + \
-                    torch.mul(1-mask_ep, alpha)
+                    torch.mul(1 - mask_ep, alpha)
 
         # calculate objective from log space
         objective = torch.sum(log_sum_exp(alpha, dim=1))
@@ -165,9 +156,9 @@ class MarkovFlow(nn.Module):
         for t in range(1, max_length):
             density = self._eval_density(sents[t])
             mask_ep = masks[t].expand(self.num_state, batch_size) \
-                      .transpose(0, 1)
+                .transpose(0, 1)
             alpha = torch.mul(mask_ep, self._forward_cell(alpha, density)) + \
-                    torch.mul(1-mask_ep, alpha)
+                    torch.mul(1 - mask_ep, alpha)
             alpha_all.append(alpha.unsqueeze(1))
 
         return torch.cat(alpha_all, dim=1)
@@ -208,7 +199,7 @@ class MarkovFlow(nn.Module):
         var = self.var.expand(ep_size)
 
         return self.log_density_c - \
-               0.5 * torch.sum((means-words) ** 2 / var, dim=2)
+               0.5 * torch.sum((means - words) ** 2 / var, dim=2)
 
     def _calc_logA(self):
         return (self.tparams - \
@@ -217,8 +208,8 @@ class MarkovFlow(nn.Module):
 
     def _calc_log_mul_emit(self):
         return self.emission - \
-                log_sum_exp(self.emission, dim=1, keepdim=True) \
-                .expand(self.num_state, self.vocab_size)
+               log_sum_exp(self.emission, dim=1, keepdim=True) \
+                   .expand(self.num_state, self.vocab_size)
 
     def _viterbi(self, sents_var, masks):
         """
@@ -242,8 +233,8 @@ class MarkovFlow(nn.Module):
         for t in range(1, length):
             density = self._eval_density(sents_var[t])
             delta_new = self.logA.expand(ep_size) + \
-                    density.unsqueeze(dim=1).expand(ep_size) + \
-                    delta.unsqueeze(dim=2).expand(ep_size)
+                        density.unsqueeze(dim=1).expand(ep_size) + \
+                        delta.unsqueeze(dim=2).expand(ep_size)
             mask_ep = masks[t].view(-1, 1, 1).expand(ep_size)
             delta = mask_ep * delta_new + \
                     (1 - mask_ep) * delta.unsqueeze(dim=1).expand(ep_size)
@@ -259,14 +250,14 @@ class MarkovFlow(nn.Module):
 
         # backward retrieve path
         # len(index_all) = length-1
-        for t in range(length-2, -1, -1):
+        for t in range(length - 2, -1, -1):
             assign_new = torch.gather(index_all[t],
                                       dim=1,
                                       index=assign.view(-1, 1)).squeeze(dim=1)
 
             assign_new = assign_new.float()
             assign = assign.float()
-            assign = masks[t+1] * assign_new + (1 - masks[t+1]) * assign
+            assign = masks[t + 1] * assign_new + (1 - masks[t + 1]) * assign
             assign = assign.long()
 
             assign_all.append(assign.unsqueeze(dim=1))
@@ -351,4 +342,4 @@ class MarkovFlow(nn.Module):
         if tagging:
             write_conll(path, sentences, index_all, null_index)
 
-        return correct/total, v_measure_score(gold_vm, model_vm)
+        return correct / total, v_measure_score(gold_vm, model_vm)

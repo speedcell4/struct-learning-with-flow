@@ -4,11 +4,10 @@
 
 import itertools
 import nltk
-
 from nltk.util import LazyMap
 
-from . import wsj
 from . import util
+from . import wsj
 
 
 class WSJn(wsj.WSJ):
@@ -39,8 +38,6 @@ class WSJn(wsj.WSJ):
             # w/o filtering
             # trees = [t for t in self.parsed()]
 
-
-
         # add hmm induced tags
         if self.extra_tags is not None:
             # new_trees = util.load_obj(self.filename + '_35_len10')
@@ -59,18 +56,16 @@ class WSJn(wsj.WSJ):
                         new_trees += [t]
                 # util.save_obj(new_trees, self.filename + '_35_len10')
 
-
         self.gold_tag_sents = [[(sub.label(), sub.leaves()[0]) \
-                              for sub in t.subtrees(lambda x: x.height() == 2)] \
-                              for t in trees]
+                                for sub in t.subtrees(lambda x: x.height() == 2)] \
+                               for t in trees]
 
         if self.extra_tags is not None:
             self.induce_tag_sents = [[(sub.leaves()[0], sub.leaves()[1]) \
-                                  for sub in t.subtrees(lambda x: x.height() == 2)] \
-                                  for t in new_trees]
+                                      for sub in t.subtrees(lambda x: x.height() == 2)] \
+                                     for t in new_trees]
         else:
             self.induce_tag_sents = None
-
 
         return trees
 
@@ -100,8 +95,8 @@ class WSJ10P(wsj.WSJ):
     """The 7422 sentences of the WSJ10 treebank but including punctuation.
     """
     # antes era puntuacion pero sin el punto final
-    #valid_tags = wsj.word_tags + wsj.punctuation_tags[1:]
-    #punctuation_tags = wsj.punctuation_tags[1:]
+    # valid_tags = wsj.word_tags + wsj.punctuation_tags[1:]
+    # punctuation_tags = wsj.punctuation_tags[1:]
     # pero no da para dejar afuera el punto porque no solo aparece al final (y es tag de ? y !):
     valid_tags = wsj.word_tags + wsj.punctuation_tags
     punctuation_tags = wsj.punctuation_tags
@@ -128,6 +123,7 @@ class WSJ10P(wsj.WSJ):
         # Con esto elimino ellipsis y $ y # (currency) al mismo tiempo:
         t.filter_tags(lambda x: x in self.valid_tags)
         return t
+
 
 """
 Comparo la version vieja con la nueva:
@@ -166,9 +162,9 @@ class WSJnTagged(WSJn):
 
     def _prepare(self, t):
         # quito puntuacion, ellipsis y monedas, sin quitar las hojas:
-        #t.remove_punctuation()
-        #t.remove_ellipsis()
-        #t.filter_tags(lambda x: x not in wsj.currency_tags_words)
+        # t.remove_punctuation()
+        # t.remove_ellipsis()
+        # t.filter_tags(lambda x: x not in wsj.currency_tags_words)
         t.filter_subtrees(lambda t: type(t) == str or len([x for x in t.pos() if x[1] in wsj.word_tags]) > 0)
         t.map_leaves(self.tagger.tag)
         return t
@@ -181,7 +177,6 @@ class WSJ10Tagged(WSJnTagged):
 
 
 class WSJTagger:
-
     filename = '../obj/clusters.nem.32'
 
     def __init__(self):
@@ -189,7 +184,7 @@ class WSJTagger:
         self.tag_dict = {}
         for l in f:
             l2 = l.split()
-            self.tag_dict[l2[0]] = l2[1]+'C'
+            self.tag_dict[l2[0]] = l2[1] + 'C'
 
     def tag(self, word):
         return self.tag_dict[word.upper()]
@@ -240,9 +235,9 @@ class WSJnLex(WSJn):
 
     def _prepare(self, t):
         # quito puntuacion, ellipsis y monedas, sin quitar las hojas:
-        #t.remove_punctuation()
-        #t.remove_ellipsis()
-        #t.filter_tags(lambda x: x not in wsj.currency_tags_words)
+        # t.remove_punctuation()
+        # t.remove_ellipsis()
+        # t.filter_tags(lambda x: x not in wsj.currency_tags_words)
         t.filter_subtrees(lambda t: type(t) == str or len([x for x in t.pos() if x[1] in wsj.word_tags]) > 0)
         return t
 
@@ -250,6 +245,7 @@ class WSJnLex(WSJn):
 class WSJ10Lex(WSJnLex):
     def __init__(self, load=True):
         WSJnLex.__init__(self, 10, load)
+
 
 """
 CREO UN ARCHIVO DE TEXTO CON LAS FRASES DEL WSJ10:
@@ -264,6 +260,7 @@ CREO UN ARCHIVO DE TEXTO CON LAS FRASES DEL WSJ10:
 >>>
 
 """
+
 
 def test():
     tb = WSJ10()

@@ -6,20 +6,20 @@
 # TODO: test projectiveness and project the dependency trees.
 
 import nltk
-from nltk.corpus.reader import dependency
-from nltk import tree
-from nltk import corpus
-
+import treebank
 from dep import depgraph
 from dep import depset
-import treebank
+from nltk import corpus
+from nltk import tree
+from nltk.corpus.reader import dependency
+
 
 class CoNLLTreebank(treebank.Treebank):
     def __init__(self, corpus, files=None, max_length=None):
         treebank.Treebank.__init__(self)
         self.corpus = corpus
         self.trees = []
-        #print is_punctuation
+        # print is_punctuation
         i = 0
         non_projectable, empty = 0, 0
         non_leaf = []
@@ -47,7 +47,7 @@ class CoNLLTreebank(treebank.Treebank):
         self.non_projectable = non_projectable
         self.empty = empty
         self.non_leaf = non_leaf
-    
+
     @staticmethod
     def is_punctuation(n):
         # n['tag'] is the fifth column.
@@ -58,14 +58,14 @@ class CoNLL06Treebank(CoNLLTreebank):
     def __init__(self, root, max_length=None, files=None):
         if files is None:
             files = self.files
-        corpus = dependency.DependencyCorpusReader(nltk.data.find('corpora/conll06/data/'+root), files)
+        corpus = dependency.DependencyCorpusReader(nltk.data.find('corpora/conll06/data/' + root), files)
         CoNLLTreebank.__init__(self, corpus, None, max_length)
 
 
 class German(CoNLL06Treebank):
     root = 'german/tiger/'
     files = ['train/german_tiger_train.conll', \
-                'test/german_tiger_test.conll']
+             'test/german_tiger_test.conll']
 
     def __init__(self, max_length=None, files=None):
         CoNLL06Treebank.__init__(self, self.root, max_length, files)
@@ -79,8 +79,8 @@ class German(CoNLL06Treebank):
 class Turkish(CoNLL06Treebank):
     root = 'turkish/metu_sabanci/'
     files = ['train/turkish_metu_sabanci_train.conll', \
-                'test/turkish_metu_sabanci_test.conll']
-    
+             'test/turkish_metu_sabanci_test.conll']
+
     def __init__(self, max_length=None, files=None):
         CoNLL06Treebank.__init__(self, self.root, max_length, files)
 
@@ -254,7 +254,8 @@ class Basque(CoNLLTreebank):
 
 def stats():
     cls = [German, Turkish, Danish, Swedish, Portuguese, Arabic, Bulgarian, \
-            Chinese, Czech, Dutch, Japanese, Slovene, Spanish]
+           Chinese, Czech, Dutch, Japanese, Slovene, Spanish]
     for c in cls:
         tb = c(max_length=10)
-        print c, len(tb.trees)
+        print
+        c, len(tb.trees)

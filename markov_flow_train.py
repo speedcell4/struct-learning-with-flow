@@ -1,31 +1,27 @@
 from __future__ import print_function
 
-import pickle
 import argparse
+import numpy as np
+import os
+import pickle
 import sys
 import time
-import os
-
 import torch
-import numpy as np
-
-from modules import read_conll, \
-                    to_input_tensor, \
-                    data_iter, \
-                    generate_seed, \
-                    sents_to_vec
-
 
 from modules import MarkovFlow
+from modules import read_conll, \
+    to_input_tensor, \
+    data_iter, \
+    generate_seed, \
+    sents_to_vec
 
 
 def init_config():
-
     parser = argparse.ArgumentParser(description='POS tagging')
 
     # train and test data
     parser.add_argument('--word_vec', type=str,
-        help='the word vector file (cPickle saved file)')
+                        help='the word vector file (cPickle saved file)')
     parser.add_argument('--train_file', type=str, help='train data')
     parser.add_argument('--test_file', default='', type=str, help='test data')
 
@@ -37,25 +33,25 @@ def init_config():
     # model config
     parser.add_argument('--model', choices=['gaussian', 'nice'], default='gaussian')
     parser.add_argument('--num_state', default=45, type=int,
-        help='number of hidden states of z')
+                        help='number of hidden states of z')
     parser.add_argument('--couple_layers', default=4, type=int,
-        help='number of coupling layers in NICE')
+                        help='number of coupling layers in NICE')
     parser.add_argument('--cell_layers', default=1, type=int,
-        help='number of cell layers of ReLU net in each coupling layer')
+                        help='number of cell layers of ReLU net in each coupling layer')
     parser.add_argument('--hidden_units', default=50, type=int, help='hidden units in ReLU Net')
 
     # pretrained model options
     parser.add_argument('--load_nice', default='', type=str,
-        help='load pretrained projection model, ignored by default')
+                        help='load pretrained projection model, ignored by default')
     parser.add_argument('--load_gaussian', default='', type=str,
-        help='load pretrained Gaussian model, ignored by default')
+                        help='load pretrained Gaussian model, ignored by default')
 
     # log parameters
     parser.add_argument('--valid_nepoch', default=1, type=int, help='valid_nepoch')
 
     # Others
     parser.add_argument('--tag_from', default='', type=str,
-        help='load pretrained model and perform tagging')
+                        help='load pretrained model and perform tagging')
     parser.add_argument('--seed', default=5783287, type=int, help='random seed')
     parser.add_argument('--set_seed', action='store_true', default=False, help='if set seed')
 
@@ -84,7 +80,7 @@ def init_config():
         else:
             args.load_gaussian = args.tag_from
         args.tag_path = "pos_%s_%slayers_tagging%d_%d.txt" % \
-        (args.model, args.couple_layers, args.jobid, args.taskid)
+                        (args.model, args.couple_layers, args.jobid, args.taskid)
 
     if args.set_seed:
         torch.manual_seed(args.seed)
@@ -96,8 +92,8 @@ def init_config():
 
     return args
 
-def main(args):
 
+def main(args):
     word_vec = pickle.load(open(args.word_vec, 'rb'))
     print('complete loading word vectors')
 
@@ -118,14 +114,13 @@ def main(args):
     print('#training sentences: %d' % len(train_data))
     print('#testing sentences: %d' % len(test_data))
 
-    log_niter = (len(train_data)//args.batch_size)//10
-
+    log_niter = (len(train_data) // args.batch_size) // 10
 
     pad = np.zeros(num_dims)
     device = torch.device("cuda" if args.cuda else "cpu")
     args.device = device
     init_seed = to_input_tensor(generate_seed(train_data, args.batch_size),
-                                  pad, device=device)
+                                pad, device=device)
 
     model = MarkovFlow(args, num_dims).to(device)
 
@@ -135,11 +130,10 @@ def main(args):
         model.eval()
         with torch.no_grad():
             accuracy, vm = model.test(test_data, test_tags, sentences=test_text,
-                tagging=True, path=args.tag_path, null_index=null_index)
+                                      tagging=True, path=args.tag_path, null_index=null_index)
         print('\n***** M1 %f, VM %f, max_var %.4f, min_var %.4f*****\n'
               % (accuracy, vm, model.var.data.max(), model.var.data.min()))
         return
-
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -155,7 +149,6 @@ def main(args):
     print('\n*****starting M1 %f, VM %f, max_var %.4f, min_var %.4f*****\n'
           % (accuracy, vm, model.var.data.max(), model.var.data.min()))
 
-
     model.train()
     for epoch in range(args.epochs):
         # model.print_params()
@@ -169,7 +162,7 @@ def main(args):
             likelihood, jacobian_loss = model(sents_var, masks)
             neg_likelihood_loss = -likelihood
 
-            avg_ll_loss = (neg_likelihood_loss + jacobian_loss)/batch_size
+            avg_ll_loss = (neg_likelihood_loss + jacobian_loss) / batch_size
 
             avg_ll_loss.backward()
 
@@ -187,19 +180,20 @@ def main(args):
             if train_iter % log_niter == 0:
                 print('epoch %d, iter %d, log_likelihood %.2f, jacobian %.2f, obj %.2f, max_var %.4f ' \
                       'min_var %.4f time elapsed %.2f sec' % (epoch, train_iter, report_ll / report_num_words, \
-                      report_jc / report_num_words, report_obj / report_num_words, model.var.max(), \
-                      model.var.min(), time.time() - begin_time))
+                                                              report_jc / report_num_words,
+                                                              report_obj / report_num_words, model.var.max(), \
+                                                              model.var.min(), time.time() - begin_time))
 
         print('\nepoch %d, log_likelihood %.2f, jacobian %.2f, obj %.2f\n' % \
-            (epoch, report_ll / report_num_words, report_jc / report_num_words,
-             report_obj / report_num_words))
+              (epoch, report_ll / report_num_words, report_jc / report_num_words,
+               report_obj / report_num_words))
 
         if epoch % args.valid_nepoch == 0:
             model.eval()
             with torch.no_grad():
                 accuracy, vm = model.test(test_data, test_tags)
             print('\n*****epoch %d, iter %d, M1 %f, VM %f*****\n' %
-                (epoch, train_iter, accuracy, vm))
+                  (epoch, train_iter, accuracy, vm))
             model.train()
 
         torch.save(model.state_dict(), args.save_path)
@@ -208,6 +202,7 @@ def main(args):
     with torch.no_grad():
         accuracy, vm = model.test(test_data, test_tags)
     print('\n complete training, accuracy %f, vm %f\n' % (accuracy, vm))
+
 
 if __name__ == '__main__':
     parse_args = init_config()

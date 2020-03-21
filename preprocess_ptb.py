@@ -7,11 +7,13 @@
 # Distributed under terms of the MIT license.
 from __future__ import print_function
 
+import argparse
 import os
 import shutil
-import argparse
+
 from nlp_commons import wsj10
 from nlp_commons.dep import dwsj
+
 
 def generate_file(dir_name, fname, max_length=10):
     data_reader = dwsj.DepWSJ(max_length=max_length, basedir=dir_name)
@@ -24,8 +26,9 @@ def generate_file(dir_name, fname, max_length=10):
         for tag_sent, sent_deps in zip(tag_sents, deps_total):
             deps = sent_deps.deps
             for i, (tag_word, dep) in enumerate(zip(tag_sent, deps)):
-                fout.write('%d\t%s\t%s\t%d\n' % (i+1, tag_word[1], tag_word[0], dep[1]+1))
+                fout.write('%d\t%s\t%s\t%d\n' % (i + 1, tag_word[1], tag_word[0], dep[1] + 1))
             fout.write('\n')
+
 
 parser = argparse.ArgumentParser(description='preprocess ptb data')
 parser.add_argument('--ptbdir', type=str, help='input directory')

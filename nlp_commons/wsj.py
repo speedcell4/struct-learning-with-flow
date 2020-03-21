@@ -5,21 +5,23 @@
 import codecs
 import itertools
 import os
-
-from nltk.corpus.reader.util import read_sexpr_block
-from nltk.corpus.reader import bracket_parse
-from nltk import tree
 from nltk import Tree
+from nltk import tree
+from nltk.corpus.reader import bracket_parse
+from nltk.corpus.reader.util import read_sexpr_block
 from nltk.util import LazyMap
 
 from . import treebank
 
 word_tags = ['CC', 'CD', 'DT', 'EX', 'FW', 'IN', 'JJ', 'JJR', 'JJS', 'LS', 'MD', 'NN', 'NNS', 'NNP', 'NNPS', 'PDT',
-'POS', 'PRP', 'PRP$', 'RB', 'RBR', 'RBS', 'RP', 'SYM', 'TO', 'UH', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ', 'WDT', 'WP', 'WP$', 'WRB']
+             'POS', 'PRP', 'PRP$', 'RB', 'RBR', 'RBS', 'RP', 'SYM', 'TO', 'UH', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ',
+             'WDT', 'WP', 'WP$', 'WRB']
 currency_tags_words = ['#', '$', 'C$', 'A$']
 ellipsis = ['*', '*?*', '0', '*T*', '*ICH*', '*U*', '*RNR*', '*EXP*', '*PPA*', '*NOT*']
 punctuation_tags = ['.', ',', ':', '-LRB-', '-RRB-', '\'\'', '``']
 punctuation_words = ['.', ',', ':', '-LRB-', '-RRB-', '\'\'', '``', '--', ';', '-', '?', '!', '...', '-LCB-', '-RCB-']
+
+
 # tag de -- - ; ... es :
 # tag de ? ! es .
 # ' no es puntuacion sino POS (pronombre posesivo?)
@@ -70,13 +72,13 @@ class WSJ(treebank.SavedTreebank):
             self.basedir = self.default_basedir
         else:
             self.basedir = basedir
-        #self.reader = BracketParseCorpusReader(self.basedir, self.get_files())
+        # self.reader = BracketParseCorpusReader(self.basedir, self.get_files())
 
     def get_files(self):
         l = os.listdir(self.basedir)
         files = []
         for d in l:
-            files = files + [d+'/'+s for s in os.listdir(self.basedir+'/'+d)]
+            files = files + [d + '/' + s for s in os.listdir(self.basedir + '/' + d)]
         return files
 
     """def parsed(self, files=None):
@@ -104,20 +106,20 @@ class WSJ(treebank.SavedTreebank):
             f = codecs.open(path, encoding='utf-8')
             i = 0
             t = read_parsed_tb_block(f)
-            #print "Parsing", len(t), "trees from file", file
+            # print "Parsing", len(t), "trees from file", file
             # print "Parsing file", file
             while t != []:
                 size += 1
-                #yield treebank.Tree(t[0], [file, i])
+                # yield treebank.Tree(t[0], [file, i])
                 yield WSJTree(t[0], [file, i])
-                i = i+1
+                i = i + 1
                 t = t[1:]
                 if t == []:
                     t = read_parsed_tb_block(f)
         print("Finished processing", size, "trees")
 
     def get_tree(self, offset=0):
-        t = self.get_trees2(offset, offset+1)[0]
+        t = self.get_trees2(offset, offset + 1)[0]
         return t
 
     # Devuelve los arboles que se encuentran en la posicion i con start <= i < end
@@ -147,6 +149,7 @@ def treebank_bracket_parse(t):
         # in case it's the real treebank format,
         # strip first and last brackets before parsing
         return tree.bracket_parse(t.strip()[1:-1])
+
 
 def read_parsed_tb_block(stream):
     return [treebank_bracket_parse(t) for t in read_sexpr_block(stream)]

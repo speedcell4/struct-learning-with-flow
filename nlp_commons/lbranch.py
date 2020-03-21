@@ -7,10 +7,11 @@
 from . import bracketing
 from . import model
 
+
 class LBranch(model.BracketingModel):
     trained = True
     tested = True
-    
+
     def __init__(self, treebank=None):
         model.BracketingModel.__init__(self, treebank)
         self.Parse = [bracketing.lbranch_bracketing(b.length) for b in self.Gold]
@@ -24,11 +25,13 @@ def main():
     print('CAST3LB10')
     main3()
 
+
 def main1():
     from . import wsj10
     tb = wsj10.WSJ10()
     m = LBranch(tb)
     m.eval()
+
 
 def main2():
     from . import negra10
@@ -37,12 +40,14 @@ def main2():
     m = LBranch(tb)
     m.eval()
 
+
 def main3():
     from . import cast3lb10
     tb = cast3lb10.Cast3LB10()
     tb.simplify_tags()
     m = LBranch(tb)
     m.eval()
+
 
 """
 from lbranch import *

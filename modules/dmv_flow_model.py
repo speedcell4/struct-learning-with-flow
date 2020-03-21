@@ -1,24 +1,23 @@
 from __future__ import print_function
+
 import math
 import pickle
-import torch
-import torch.nn as nn
+from collections import Counter
 
 import numpy as np
-
-from collections import Counter
-from .projection import NICETrans
-from .dmv_viterbi_model import DMVDict
-
+import torch
+import torch.nn as nn
 from torch.nn import Parameter
 
+from .projection import NICETrans
 from .utils import log_sum_exp, \
-                   unravel_index, \
-                   data_iter, \
-                   to_input_tensor, \
-                   stable_math_log
+    unravel_index, \
+    data_iter, \
+    to_input_tensor, \
+    stable_math_log
 
 NEG_INFINITY = -1e20
+
 
 def test_piodict(piodict):
     """
@@ -31,10 +30,9 @@ def test_piodict(piodict):
             return False
     return True
 
+
 def log_softmax(input, dim):
-    return (input - \
-            log_sum_exp(input, dim=dim, keepdim=True) \
-            .expand_as(input))
+    return input - log_sum_exp(input, dim=dim, keepdim=True).expand_as(input)
 
 
 class DMVFlow(nn.Module):
@@ -58,10 +56,9 @@ class DMVFlow(nn.Module):
                                         self.num_dims,
                                         self.device)
 
-
         # Gaussian Variance
         self.var = torch.zeros(num_dims, dtype=torch.float32,
-            device=self.device, requires_grad=False)
+                               device=self.device, requires_grad=False)
 
         # dim0 is head and dim1 is argument
         self.attach_left = Parameter(torch.Tensor(self.num_state, self.num_state))
@@ -116,38 +113,38 @@ class DMVFlow(nn.Module):
         for i in range(self.num_state):
             for j in range(self.num_state):
                 self.attach_left[i, j] = load_model.tita.val(
-                                              ('attach_left', self.ids[j], self.ids[i]))
+                    ('attach_left', self.ids[j], self.ids[i]))
 
                 self.attach_right[i, j] = load_model.tita.val(
-                                               ('attach_right', self.ids[j], self.ids[i]))
+                    ('attach_right', self.ids[j], self.ids[i]))
 
             self.stop_left[1, i, 0] = load_model.tita \
-                                           .val(('stop_left', self.ids[i], 0))
+                .val(('stop_left', self.ids[i], 0))
             self.stop_left[0, i, 0] = stable_math_log(1.0 - math.exp(load_model.tita \
-                                           .val(('stop_left', self.ids[i], 0))))
+                                                                     .val(('stop_left', self.ids[i], 0))))
             self.stop_left[1, i, 1] = load_model.tita \
-                                           .val(('stop_left', self.ids[i], 1))
+                .val(('stop_left', self.ids[i], 1))
             self.stop_left[0, i, 1] = stable_math_log(1.0 - math.exp(load_model.tita \
-                                           .val(('stop_left', self.ids[i], 1))))
+                                                                     .val(('stop_left', self.ids[i], 1))))
             self.stop_right[1, i, 0] = load_model.tita \
-                                           .val(('stop_right', self.ids[i], 0))
+                .val(('stop_right', self.ids[i], 0))
             self.stop_right[0, i, 0] = stable_math_log(1.0 - math.exp(load_model.tita \
-                                           .val(('stop_right', self.ids[i], 0))))
+                                                                      .val(('stop_right', self.ids[i], 0))))
             self.stop_right[1, i, 1] = load_model.tita \
-                                           .val(('stop_right', self.ids[i], 1))
+                .val(('stop_right', self.ids[i], 1))
             self.stop_right[0, i, 1] = stable_math_log(1 - math.exp(load_model.tita \
-                                           .val(('stop_right', self.ids[i], 1))))
+                                                                    .val(('stop_right', self.ids[i], 1))))
             self.root_attach_left[i] = load_model.tita \
-                                            .val(('attach_left', self.ids[i], 'END'))
+                .val(('attach_left', self.ids[i], 'END'))
 
     def init_mean(self, train_tagid, train_emb):
         pad = np.zeros(self.num_dims)
         emb_dict = {}
         cnt_dict = Counter()
         for sents, tagid_sents in data_iter(list(zip(train_emb, train_tagid)), \
-                                           batch_size=self.args.batch_size, \
-                                           is_test=True, \
-                                           shuffle=False):
+                                            batch_size=self.args.batch_size, \
+                                            is_test=True, \
+                                            shuffle=False):
             sents_var, masks = to_input_tensor(sents, pad, self.device)
             sents_var, _ = self.transform(sents_var)
             sents_var = sents_var.transpose(0, 1)
@@ -163,7 +160,6 @@ class DMVFlow(nn.Module):
         for i in range(self.num_state):
             self.means[i] = emb_dict[i] / cnt_dict[i]
 
-
     def transform(self, x):
         """
         Args:
@@ -174,7 +170,6 @@ class DMVFlow(nn.Module):
         if self.args.model == 'nice':
             x, jacobian_loss_new = self.nice_layer(x)
             jacobian_loss = jacobian_loss + jacobian_loss_new
-
 
         return x, jacobian_loss
 
@@ -210,7 +205,7 @@ class DMVFlow(nn.Module):
                 assert left_child[3] == 2
                 assert right_child[3] == 1
                 arg = left_child[-1]
-            res = set([(arg, index)])
+            res = {(arg, index)}
             res.update(self._tree_to_depset(left_child[1].item(), left_child[2].item(),
                                             left_child[3].item(), batch, left_child[4].item(),
                                             left_child[5].item()), \
@@ -255,9 +250,9 @@ class DMVFlow(nn.Module):
                                            shuffle=False):
 
             if eval_all and batch_id_ % 10 == 0:
-                print('batch %d' % batch_id_)
-                print('total length: %d' % cnt)
-                print('correct directed: %d' % dir_cnt)
+                print(f'batch {batch_id_:d}')
+                print(f'total length: {cnt:d}')
+                print(f'correct directed: {dir_cnt:d}')
             batch_id_ += 1
             try:
                 sents_var, masks = to_input_tensor(sents, pad, self.device)
@@ -266,15 +261,15 @@ class DMVFlow(nn.Module):
                 # root_max_index: (batch_size, num_state, seq_length)
                 batch_size, seq_length, _ = sents_var.size()
                 symbol_index_t = self.attach_left.new([[[p, q] for q in range(seq_length)] \
-                                                      for p in range(self.num_state)]) \
-                                                      .expand(batch_size, self.num_state, seq_length, 2)
+                                                       for p in range(self.num_state)]) \
+                    .expand(batch_size, self.num_state, seq_length, 2)
                 root_max_index = self.dep_parse(sents_var, masks, symbol_index_t)
                 batch_size = masks.size(1)
                 sent_len = [torch.sum(masks[:, i]).item() for i in range(batch_size)]
                 parse = self.tree_to_depset(root_max_index, sent_len)
             except RuntimeError:
                 memory_sent_cnt += 1
-                print('batch %d out of memory' % batch_id_)
+                print(f'batch {batch_id_:d} out of memory')
                 continue
 
             for gold_s, parse_s in zip(gold_batch, parse):
@@ -294,16 +289,16 @@ class DMVFlow(nn.Module):
         self.right_child = {}
 
         if eval_all:
-            print('%d batches out of memory' % memory_sent_cnt)
+            print(f'{memory_sent_cnt:d} batches out of memory')
 
-        return (dir_acu, undir_acu)
+        return dir_acu, undir_acu
 
     @staticmethod
     def measures(gold_s, parse_s):
         # Helper for eval().
         (d, u) = (0, 0)
         for (a, b) in gold_s:
-            (a, b) = (a-1, b-1)
+            (a, b) = (a - 1, b - 1)
             b1 = (a, b) in parse_s
             b2 = (b, a) in parse_s
             if b1:
@@ -312,8 +307,7 @@ class DMVFlow(nn.Module):
             if b2:
                 u += 1.0
 
-        return (d, u)
-
+        return d, u
 
     def _eval_log_density(self, s):
         """
@@ -329,13 +323,10 @@ class DMVFlow(nn.Module):
         means = self.means.view(1, 1, self.num_state, features).expand(ep_size)
         words = s.unsqueeze(dim=2).expand(ep_size)
         var = self.var.expand(ep_size)
-        return self.log_density_c - \
-               0.5 * torch.sum((means - words) ** 2 / var, dim=3)
+        return self.log_density_c - 0.5 * torch.sum((means - words) ** 2 / var, dim=3)
 
     def _calc_log_density_c(self):
-
-        return -self.num_dims/2.0 * (math.log(2 * math.pi)) - \
-                0.5 * torch.sum(torch.log(self.var))
+        return -self.num_dims / 2.0 * (math.log(2 * math.pi)) - 0.5 * torch.sum(torch.log(self.var))
 
     def p_inside(self, sents, masks):
         """
@@ -377,8 +368,8 @@ class DMVFlow(nn.Module):
         for i in range(seq_length):
             j = i + 1
             cat_var = [torch.zeros((batch_size, self.num_state, 1),
-                    dtype=torch.float32,
-                    device=self.device).fill_(NEG_INFINITY) for _ in range(seq_length)]
+                                   dtype=torch.float32,
+                                   device=self.device).fill_(NEG_INFINITY) for _ in range(seq_length)]
 
             cat_var[i] = density[:, i, :].unsqueeze(dim=2)
             self.log_p_inside[i, j, 0] = torch.cat(cat_var, dim=2)
@@ -387,21 +378,20 @@ class DMVFlow(nn.Module):
         log_stop_right = self.log_stop_right[0]
         log_stop_left = self.log_stop_left[0]
 
-        #TODO(junxian): ideally, only the l loop is needed
+        # TODO(junxian): ideally, only the l loop is needed
         # but eliminate the rest loops would be a bit hard
-        for l in range(2, seq_length+1):
-            for i in range(seq_length-l+1):
+        for l in range(2, seq_length + 1):
+            for i in range(seq_length - l + 1):
                 j = i + l
                 log_p1 = []
                 log_p2 = []
-                index = torch.zeros((seq_length, j-i-1), dtype=torch.long, 
-                    device=self.device, requires_grad=False)
+                index = torch.zeros((seq_length, j - i - 1), dtype=torch.long,
+                                    device=self.device, requires_grad=False)
                 # right attachment
-                for k in range(i+1, j):
-
+                for k in range(i + 1, j):
                     log_p1.append(self.log_p_inside[i, k, 0].unsqueeze(-1))
                     log_p2.append(self.log_p_inside[k, j, 2].unsqueeze(-1))
-                    index[k-1, k-i-1] = 1
+                    index[k - 1, k - i - 1] = 1
 
                 log_p1 = torch.cat(log_p1, dim=-1)
                 log_p2 = torch.cat(log_p2, dim=-1)
@@ -409,7 +399,7 @@ class DMVFlow(nn.Module):
 
                 # (num_state, seq_len, k)
                 log_stop_right_gather = torch.gather(
-                    log_stop_right.unsqueeze(-1).expand(*log_stop_right.size(), j-i-1), 
+                    log_stop_right.unsqueeze(-1).expand(*log_stop_right.size(), j - i - 1),
                     1, index)
 
                 # log_p_tmp[b, i, m, j, n] = log_p1[b, i, m] + log_p2[b, j, n] + stop_right[0, i, m==k-1]
@@ -431,20 +421,19 @@ class DMVFlow(nn.Module):
                 # left attachment
                 log_p1 = []
                 log_p2 = []
-                index = torch.zeros((seq_length, j-i-1), dtype=torch.long, 
-                    device=self.device, requires_grad=False)
-                for k in range(i+1, j):
-
+                index = torch.zeros((seq_length, j - i - 1), dtype=torch.long,
+                                    device=self.device, requires_grad=False)
+                for k in range(i + 1, j):
                     log_p1.append(self.log_p_inside[i, k, 2].unsqueeze(-1))
                     log_p2.append(self.log_p_inside[k, j, 1].unsqueeze(-1))
-                    index[k, k-i-1] = 1
+                    index[k, k - i - 1] = 1
 
                 log_p1 = torch.cat(log_p1, dim=-1)
                 log_p2 = torch.cat(log_p2, dim=-1)
                 index = index.unsqueeze(0).expand(self.num_state, *index.size())
 
                 log_stop_left_gather = torch.gather(
-                    log_stop_left.unsqueeze(-1).expand(*log_stop_left.size(), j-i-1), 
+                    log_stop_left.unsqueeze(-1).expand(*log_stop_left.size(), j - i - 1),
                     1, index)
 
                 # log_p_tmp[b, i, m, j, n] = log_p1[b, i, m] + log_p2[b, j, n] + stop_left[0, j, n==k]
@@ -457,12 +446,10 @@ class DMVFlow(nn.Module):
                 log_p1_tmp = log_sum_exp(log_p1_tmp, dim=1)
 
                 # (b, j, n, k)
-                log_p_tmp = log_p1_tmp.unsqueeze(2) + log_p2 + \
-                            log_stop_left_gather.unsqueeze(0)
+                log_p_tmp = log_p1_tmp.unsqueeze(2) + log_p2 + log_stop_left_gather.unsqueeze(0)
                 self.log_p_inside[i, j, 1] = log_sum_exp(log_p_tmp, dim=-1)
 
                 self.unary_p_inside(i, j, batch_size, seq_length)
-
 
         # calculate log likelihood
         sent_len_t = masks.sum(dim=0).detach()
@@ -473,10 +460,9 @@ class DMVFlow(nn.Module):
         log_p_sum_cat = torch.cat(log_p_sum, dim=0)
 
         log_root = log_p_sum_cat + self.log_root_attach_left.view(1, self.num_state, 1) \
-                   .expand_as(log_p_sum_cat)
+            .expand_as(log_p_sum_cat)
 
         return torch.sum(log_sum_exp(log_root.view(batch_size, -1), dim=1))
-
 
     def dep_parse(self, sents, masks, symbol_index_t):
         """
@@ -495,10 +481,8 @@ class DMVFlow(nn.Module):
         self.log_stop_left = log_softmax(self.stop_left, dim=0)
         self.log_root_attach_left = log_softmax(self.root_attach_left, dim=0)
 
-
         # (batch_size, seq_length, num_state)
         density = self._eval_log_density(sents)
-
 
         # in the parse case, log_p_parse[i, j, mark] is not the log prob
         # of some symbol as head, instead it is the prob of the most likely
@@ -517,17 +501,16 @@ class DMVFlow(nn.Module):
 
         batch_size, seq_length, _ = sents.size()
 
-
         for i in range(seq_length):
             j = i + 1
             cat_var = [torch.zeros((batch_size, self.num_state, 1),
-                    dtype=torch.float32,
-                    device=self.device).fill_(NEG_INFINITY) for _ in range(seq_length)]
+                                   dtype=torch.float32,
+                                   device=self.device).fill_(NEG_INFINITY) for _ in range(seq_length)]
             cat_var[i] = density[:, i, :].unsqueeze(dim=2)
             self.log_p_parse[i, j, 0] = torch.cat(cat_var, dim=2)
             self.left_child[i, j, 0] = torch.zeros((batch_size, self.num_state, seq_length, 6),
-                                                    dtype=torch.long,
-                                                    device=self.device).fill_(-1)
+                                                   dtype=torch.long,
+                                                   device=self.device).fill_(-1)
             self.right_child[i, j, 0] = torch.zeros((batch_size, self.num_state, seq_length, 6),
                                                     dtype=torch.long,
                                                     device=self.device).fill_(-1)
@@ -538,21 +521,20 @@ class DMVFlow(nn.Module):
 
         # ideally, only the l loop is needed
         # but eliminate the rest loops would be a bit hard
-        for l in range(2, seq_length+1):
-            for i in range(seq_length-l+1):
+        for l in range(2, seq_length + 1):
+            for i in range(seq_length - l + 1):
                 j = i + l
 
                 # right attachment
                 log_p1 = []
                 log_p2 = []
-                index = torch.zeros((seq_length, j-i-1), dtype=torch.long, 
-                    device=self.device, requires_grad=False)
-                for k in range(i+1, j):
-
+                index = torch.zeros((seq_length, j - i - 1), dtype=torch.long,
+                                    device=self.device, requires_grad=False)
+                for k in range(i + 1, j):
                     # right attachment
                     log_p1.append(self.log_p_parse[i, k, 0].unsqueeze(-1))
                     log_p2.append(self.log_p_parse[k, j, 2].unsqueeze(-1))
-                    index[k-1, k-i-1] = 1
+                    index[k - 1, k - i - 1] = 1
 
                 log_p1 = torch.cat(log_p1, dim=-1)
                 log_p2 = torch.cat(log_p2, dim=-1)
@@ -560,7 +542,7 @@ class DMVFlow(nn.Module):
 
                 # (num_state, seq_len, k)
                 log_stop_right_gather = torch.gather(
-                    log_stop_right.unsqueeze(-1).expand(*log_stop_right.size(), j-i-1), 
+                    log_stop_right.unsqueeze(-1).expand(*log_stop_right.size(), j - i - 1),
                     1, index)
 
                 # log_p2_tmp: (b, j, k)
@@ -570,7 +552,8 @@ class DMVFlow(nn.Module):
                 # log_p2_tmp: (b, i, k)
                 # max_index_symbol: (b, i, k)
                 log_p2_tmp, max_index_symbol = torch.max(log_p2_tmp.unsqueeze(1) +
-                    self.log_attach_right.view(1, *(self.log_attach_right.size()), 1), 2)
+                                                         self.log_attach_right.view(1, *(self.log_attach_right.size()),
+                                                                                    1), 2)
 
                 # (b, i, m, k)
                 log_p_tmp = log_p1 + log_p2_tmp.unsqueeze(2) + log_stop_right_gather.unsqueeze(0)
@@ -592,17 +575,15 @@ class DMVFlow(nn.Module):
                                          max_index_symbol.unsqueeze(-1),
                                          max_index_loc.unsqueeze(-1)), dim=-1)
 
-
                 # left attachment
                 log_p1 = []
                 log_p2 = []
-                index = torch.zeros((seq_length, j-i-1), dtype=torch.long, 
-                    device=self.device, requires_grad=False)
-                for k in range(i+1, j):
-
+                index = torch.zeros((seq_length, j - i - 1), dtype=torch.long,
+                                    device=self.device, requires_grad=False)
+                for k in range(i + 1, j):
                     log_p1.append(self.log_p_parse[i, k, 2].unsqueeze(-1))
                     log_p2.append(self.log_p_parse[k, j, 1].unsqueeze(-1))
-                    index[k, k-i-1] = 1
+                    index[k, k - i - 1] = 1
 
                 log_p1 = torch.cat(log_p1, dim=-1)
                 log_p2 = torch.cat(log_p2, dim=-1)
@@ -610,7 +591,7 @@ class DMVFlow(nn.Module):
 
                 # (num_state, seq_len, k)
                 log_stop_left_gather = torch.gather(
-                    log_stop_left.unsqueeze(-1).expand(*log_stop_left.size(), j-i-1), 
+                    log_stop_left.unsqueeze(-1).expand(*log_stop_left.size(), j - i - 1),
                     1, index)
 
                 # log_p1_tmp: (b, i, k)
@@ -620,11 +601,11 @@ class DMVFlow(nn.Module):
                 # log_p1_tmp: (b, j, k)
                 # max_index_symbol: (b, j, k)
                 log_p1_tmp, max_index_symbol = torch.max(log_p1_tmp.unsqueeze(2) +
-                    self.log_attach_left.permute(1, 0).view(1, *(self.log_attach_left.size()), 1), 1)
+                                                         self.log_attach_left.permute(1, 0).view(1, *(
+                                                             self.log_attach_left.size()), 1), 1)
 
                 # (b, j, n, k)
                 log_p_tmp = log_p1_tmp.unsqueeze(2) + log_p2 + log_stop_left_gather.unsqueeze(0)
-
 
                 # log_p_max: (batch_size, num_state, seq_length)
                 # max_index_k: (batch_size, num_state, seq_length)
@@ -703,7 +684,7 @@ class DMVFlow(nn.Module):
             log_p_sum += [self.log_p_parse[0, sent_len, 2][i].unsqueeze(dim=0)]
         log_p_sum_cat = torch.cat(log_p_sum, dim=0)
         log_root = log_p_sum_cat + self.log_root_attach_left.view(1, self.num_state, 1) \
-                   .expand_as(log_p_sum_cat)
+            .expand_as(log_p_sum_cat)
         log_root_max, root_max_index = torch.max(log_root.view(batch_size, -1), dim=1)
 
         # (batch_size, 2)
@@ -718,16 +699,16 @@ class DMVFlow(nn.Module):
         log_stop_right = self.log_stop_right[1].expand(batch_size, self.num_state, 2)
 
         index_ladj = torch.zeros((batch_size, self.num_state, seq_length),
-                dtype=torch.long,
-                device=self.device,
-                requires_grad=False)
+                                 dtype=torch.long,
+                                 device=self.device,
+                                 requires_grad=False)
         index_radj = torch.zeros((batch_size, self.num_state, seq_length),
-                dtype=torch.long,
-                device=self.device,
-                requires_grad=False)
+                                 dtype=torch.long,
+                                 device=self.device,
+                                 requires_grad=False)
 
         index_ladj[:, :, i].fill_(1)
-        index_radj[:, :, j-1].fill_(1)
+        index_radj[:, :, j - 1].fill_(1)
 
         log_stop_right = torch.gather(log_stop_right, 2, index_radj)
         inter_right_stop_mark = non_stop_mark + log_stop_right
@@ -735,14 +716,12 @@ class DMVFlow(nn.Module):
         if (i, j, 1) in self.log_p_inside:
             right_stop_mark = self.log_p_inside[i, j, 1]
             right_stop_mark = torch.cat((right_stop_mark.unsqueeze(dim=3), \
-                                    inter_right_stop_mark.unsqueeze(dim=3)), \
-                                    dim=3)
+                                         inter_right_stop_mark.unsqueeze(dim=3)), \
+                                        dim=3)
             right_stop_mark = log_sum_exp(right_stop_mark, dim=3)
 
         else:
             right_stop_mark = inter_right_stop_mark
-
-
 
         log_stop_left = torch.gather(log_stop_left, 2, index_ladj)
         self.log_p_inside[i, j, 2] = right_stop_mark + log_stop_left
@@ -754,13 +733,13 @@ class DMVFlow(nn.Module):
         log_stop_right = self.log_stop_right[1].expand(batch_size, self.num_state, 2)
 
         index_ladj = torch.zeros((batch_size, self.num_state, seq_length),
-                dtype=torch.long,
-                device=self.device,
-                requires_grad=False)
+                                 dtype=torch.long,
+                                 device=self.device,
+                                 requires_grad=False)
         index_radj = torch.zeros((batch_size, self.num_state, seq_length),
-                dtype=torch.long,
-                device=self.device,
-                requires_grad=False)
+                                 dtype=torch.long,
+                                 device=self.device,
+                                 requires_grad=False)
 
         left_child_index_mark2 = index_ladj.new(batch_size, self.num_state, seq_length, 6)
         right_child_index_mark2 = index_ladj.new(batch_size, self.num_state, seq_length, 6)
@@ -768,7 +747,7 @@ class DMVFlow(nn.Module):
         right_child_index_mark1 = index_ladj.new(batch_size, self.num_state, seq_length, 6)
 
         index_ladj[:, :, i].fill_(1)
-        index_radj[:, :, j-1].fill_(1)
+        index_radj[:, :, j - 1].fill_(1)
 
         log_stop_right = torch.gather(log_stop_right, 2, index_radj)
         inter_right_stop_mark = non_stop_mark + log_stop_right
@@ -799,8 +778,8 @@ class DMVFlow(nn.Module):
 
             # max_index (batch_size, num_state, index) (value is 0 or 1)
             right_stop_mark, max_index = torch.max(torch.cat((right_stop_mark.unsqueeze(dim=3), \
-                                    inter_right_stop_mark.unsqueeze(dim=3)), \
-                                    dim=3), dim=3)
+                                                              inter_right_stop_mark.unsqueeze(dim=3)), \
+                                                             dim=3), dim=3)
 
             # mask: (batch_size, num_state, index)
             mask = (max_index == 1)
@@ -808,7 +787,7 @@ class DMVFlow(nn.Module):
             left_child_index_mark1 = self.left_child[i, j, 1].masked_fill_(mask_ep, 0) + \
                                      left_child_index_mark1.masked_fill_(1 - mask_ep, 0)
             right_child_index_mark1 = self.right_child[i, j, 1].masked_fill_(mask_ep, 0) + \
-                                     right_child_index_mark1.masked_fill_(1 - mask_ep, 0)
+                                      right_child_index_mark1.masked_fill_(1 - mask_ep, 0)
 
 
         else:
@@ -818,7 +797,6 @@ class DMVFlow(nn.Module):
         self.log_p_parse[i, j, 2] = right_stop_mark + log_stop_left
         self.log_p_parse[i, j, 1] = right_stop_mark
 
-
         # assign indicator
         left_child_index_mark2[:, :, :, 0] = 1
         right_child_index_mark2[:, :, :, 0] = 0
@@ -827,11 +805,9 @@ class DMVFlow(nn.Module):
         left_child_index_mark2[:, :, :, 1] = i
         right_child_index_mark2[:, :, :, 1] = i
 
-
         # assign end point
         left_child_index_mark2[:, :, :, 2] = j
         right_child_index_mark2[:, :, :, 2] = j
-
 
         # assign mark
         left_child_index_mark2[:, :, :, 3] = 1
@@ -841,7 +817,6 @@ class DMVFlow(nn.Module):
         left_child_symbol_index_mark2 = symbol_index_t
         left_child_index_mark2[:, :, :, 4:] = left_child_symbol_index_mark2
         right_child_index_mark2[:, :, :, 4:] = left_child_symbol_index_mark2
-
 
         self.left_child[i, j, 2] = left_child_index_mark2
         self.right_child[i, j, 2] = right_child_index_mark2

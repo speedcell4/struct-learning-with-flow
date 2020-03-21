@@ -10,5 +10,3 @@
 Modules of the lq_nlp_commons library
 
 """
-
-

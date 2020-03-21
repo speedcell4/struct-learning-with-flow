@@ -23,25 +23,25 @@ class Graph:
 
     def edge(self, n1, n2):
         return (n1, n2) in self.edges or (n2, n1) in self.edges
-    
+
     def neighbors(self, n):
         """Return a list with the neighbors of n.
         """
-        return [p for (p,q) in self.edges if q==n] \
-            + [q for (p,q) in self.edges if p==n]
-    
+        return [p for (p, q) in self.edges if q == n] \
+               + [q for (p, q) in self.edges if p == n]
+
     def remove_node(self, n):
         if n in self.nodes:
             self.nodes.remove(n)
             for (p, q) in self.edges:
-                if n in [p,q]:
-                    self.edges.remove((p,q))
-    
+                if n in [p, q]:
+                    self.edges.remove((p, q))
+
     def has_cicle(self):
         """assert 'self must be connected'
         Returns True if there is a cicle, False otherwise.
         """
-        #if len(self.edges) >= len(self.nodes):
+        # if len(self.edges) >= len(self.nodes):
         #    return True
         n = self.get_node()
         stack = [n]
@@ -55,7 +55,7 @@ class Graph:
                 stack += [m for m in self.neighbors(n) if m not in visited]
 
         return False
-    
+
     def prune_subtrees(self, iterations=-1):
         """Iteratively remove the nodes of degree 1. iterations == -1 means to
         do this until there aren't nodes to remove.
@@ -67,7 +67,7 @@ class Graph:
                 self.remove_node(n)
             nodes1 = [n for n in self.nodes_list() if len(self.neighbors(n)) == 1]
             i += 1
-    
+
     def compute_connected_components(self):
         """Compute the connected components of the graph in the variable self.ccs.
         """
@@ -75,7 +75,7 @@ class Graph:
         if not nodes:
             self.ccs = []
             return 0
-        #nodes = self.nodes
+        # nodes = self.nodes
         ccs = {0: [nodes[0]]}
         nextcc = 1
         for i in range(1, len(nodes)):
@@ -97,13 +97,13 @@ class Graph:
                 cc += [node]
 
         self.ccs = list(ccs.values())
-        #return len(self.ccs)
+        # return len(self.ccs)
 
     def is_independent_set(self, nodes, show=False):
         """Checks if a list of nodes is an independent set. If show=True and the
         result is False, prints the first counter-example found.
         """
-        #return all(not self.edge(m, n) for m in nodes for n in nodes)
+        # return all(not self.edge(m, n) for m in nodes for n in nodes)
         for m in nodes:
             for n in nodes:
                 if self.edge(m, n):
@@ -111,7 +111,7 @@ class Graph:
                         print("Edge found:", (m, n))
                     return False
         return True
-    
+
     def get_dot_graph(self, nodes=None):
         if nodes == None:
             nodes = self.nodes
@@ -121,12 +121,12 @@ class Graph:
             node = nodes[i]
             for j in range(i):
                 # maybe:
-                #if self.edge(str(node), str(nodes[j])):
+                # if self.edge(str(node), str(nodes[j])):
                 if self.edge(node, nodes[j]):
                     e = pydot.Edge(node, nodes[j])
                     g.add_edge(e)
         return g
-    
+
     def draw_graph(self, filename, nodes=None):
         """Draw the graph in a JPG file.
         """
@@ -140,7 +140,7 @@ class WGraph(Graph):
 
     def edge_weight(self, n1, n2):
         return 0
-    
+
     def compute_connected_components(self, w_min=1):
         """Compute the connected components of the graph in the variable self.ccs.
         w_min is the minimal weight for the edges to consider.
@@ -149,7 +149,7 @@ class WGraph(Graph):
         if not nodes:
             self.ccs = []
             return 0
-        #nodes = self.nodes
+        # nodes = self.nodes
         ccs = {0: [nodes[0]]}
         nextcc = 1
         for i in range(1, len(nodes)):
@@ -171,8 +171,8 @@ class WGraph(Graph):
                 cc += [node]
 
         self.ccs = list(ccs.values())
-        #return len(self.ccs)
-    
+        # return len(self.ccs)
+
     def get_dot_graph(self, nodes=None, w_min=1):
         if nodes == None:
             nodes = self.nodes_list()
@@ -182,12 +182,12 @@ class WGraph(Graph):
             node = nodes[i]
             for j in range(i):
                 # maybe:
-                #if self.edge(str(node), str(nodes[j])):
+                # if self.edge(str(node), str(nodes[j])):
                 if self.edge_weight(node, nodes[j]) >= w_min:
                     e = pydot.Edge(node, nodes[j])
                     g.add_edge(e)
         return g
-    
+
     def draw_graph(self, filename, nodes=None, w_min=1):
         """Draw the graph in a JPG file.
         """

@@ -1,5 +1,4 @@
 from __future__ import print_function
-import math
 
 import torch
 import torch.nn as nn
@@ -14,7 +13,7 @@ class ReLUNet(nn.Module):
         self.in_layer = nn.Linear(in_features, hidden_units, bias=True)
         self.out_layer = nn.Linear(hidden_units, out_features, bias=True)
         for i in range(hidden_layers):
-            name = 'cell{}'.format(i)
+            name = f'cell{i}'
             cell = nn.Linear(hidden_units, hidden_units, bias=True)
             setattr(self, name, cell)
 
@@ -22,7 +21,7 @@ class ReLUNet(nn.Module):
         self.in_layer.reset_parameters()
         self.out_layer.reset_parameters()
         for i in range(self.hidden_layers):
-            name = 'cell{}'.format(i)
+            name = f'cell{i}'
             getattr(self, name).reset_parameters()
 
     def init_identity(self):
@@ -31,7 +30,7 @@ class ReLUNet(nn.Module):
         self.out_layer.weight.data.zero_()
         self.out_layer.bias.data.zero_()
         for i in range(self.hidden_layers):
-            name = 'cell{}'.format(i)
+            name = f'cell{i}'
             getattr(self, name).weight.data.zero_()
             getattr(self, name).bias.data.zero_()
 
@@ -44,7 +43,7 @@ class ReLUNet(nn.Module):
         h = self.in_layer(input)
         h = F.relu(h)
         for i in range(self.hidden_layers):
-            name = 'cell{}'.format(i)
+            name = f'cell{i}'
             h = getattr(self, name)(h)
             h = F.relu(h)
         return self.out_layer(h)
@@ -63,20 +62,19 @@ class NICETrans(nn.Module):
         self.couple_layers = couple_layers
 
         for i in range(couple_layers):
-            name = 'cell{}'.format(i)
-            cell = ReLUNet(cell_layers, hidden_units, features//2, features//2)
+            name = f'cell{i}'
+            cell = ReLUNet(cell_layers, hidden_units, features // 2, features // 2)
             setattr(self, name, cell)
 
     def reset_parameters(self):
         for i in range(self.couple_layers):
-            name = 'cell{}'.format(i)
+            name = f'cell{i}'
             getattr(self, name).reset_parameters()
 
     def init_identity(self):
         for i in range(self.couple_layers):
-            name = 'cell{}'.format(i)
+            name = f'cell{i}'
             getattr(self, name).init_identity()
-
 
     def forward(self, input):
         """
@@ -86,17 +84,16 @@ class NICETrans(nn.Module):
         """
 
         # For NICE it is a constant
-        jacobian_loss = torch.zeros(1, device=self.device,
-                                    requires_grad=False)
+        jacobian_loss = torch.zeros(1, device=self.device, requires_grad=False)
 
         ep_size = input.size()
         features = ep_size[-1]
         # h = odd_input
         h = input
         for i in range(self.couple_layers):
-            name = 'cell{}'.format(i)
-            h1, h2 = torch.split(h, features//2, dim=-1)
-            if i%2 == 0:
+            name = f'cell{i}'
+            h1, h2 = torch.split(h, features // 2, dim=-1)
+            if i % 2 == 0:
                 h = torch.cat((h1, h2 + getattr(self, name)(h1)), dim=-1)
             else:
                 h = torch.cat((h1 + getattr(self, name)(h2), h2), dim=-1)

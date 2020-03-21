@@ -2,10 +2,10 @@
 # URL: <http://www.cs.famaf.unc.edu.ar/~francolq/>
 # For license information, see LICENSE.txt
 
-from nltk.parse import dependencygraph
-from nltk import tree
-
 import treebank
+from nltk import tree
+from nltk.parse import dependencygraph
+
 
 class DepGraph(dependencygraph.DependencyGraph):
 
@@ -34,7 +34,7 @@ class DepGraph(dependencygraph.DependencyGraph):
             else:
                 newindex.append(-1)
             i += 1
-        #print newindex
+        # print newindex
         # fix attributes 'head' and 'deps':
         node = newnodelist[0]
         node['deps'] = [newindex[i] for i in node['deps'] if newindex[i] != -1]
@@ -45,10 +45,10 @@ class DepGraph(dependencygraph.DependencyGraph):
             node['head'] = i
             node['deps'] = [newindex[i] for i in node['deps'] if newindex[i] != -1]
         self.nodelist = newnodelist
-    
+
     def constree(self):
         # Some depgraphs have several roots (for instance, 512th of Turkish).
-        #i = self.root['address']
+        # i = self.root['address']
         roots = self.nodelist[0]['deps']
         if len(roots) == 1:
             return treebank.Tree(self._constree(roots[0]))
@@ -56,14 +56,14 @@ class DepGraph(dependencygraph.DependencyGraph):
             # TODO: check projectivity here also.
             trees = [self._constree(i) for i in roots]
             return treebank.Tree(tree.Tree('TOP', trees))
-    
+
     def _constree(self, i):
         node = self.nodelist[i]
         word = node['word']
         deps = node['deps']
         if len(deps) == 0:
             t = tree.Tree(node['tag'], [word])
-            t.span = (i, i+1)
+            t.span = (i, i + 1)
             return t
         address = node['address']
         ldeps = [j for j in deps if j < address]
@@ -71,14 +71,14 @@ class DepGraph(dependencygraph.DependencyGraph):
         lsubtrees = [self._constree(j) for j in ldeps]
         rsubtrees = [self._constree(j) for j in rdeps]
         csubtree = tree.Tree(node['tag'], [word])
-        csubtree.span = (i, i+1)
-        subtrees = lsubtrees+[csubtree]+rsubtrees
-        
+        csubtree.span = (i, i + 1)
+        subtrees = lsubtrees + [csubtree] + rsubtrees
+
         # check projectivity:
-        for j in range(len(subtrees)-1):
-            if subtrees[j].span[1] != subtrees[j+1].span[0]:
+        for j in range(len(subtrees) - 1):
+            if subtrees[j].span[1] != subtrees[j + 1].span[0]:
                 raise Exception('Non-projectable dependency graph.')
-        
+
         t = tree.Tree(word, subtrees)
         j = subtrees[0].span[0]
         k = subtrees[-1].span[1]
@@ -92,5 +92,5 @@ def from_depset(depset, s):
     """
     tab = ""
     for i, j in depset:
-        tab += '\t'.join([str(i+1), s[i], '_', s[i], '_\t_', str(j+1), '_\t_\t_\n'])
+        tab += '\t'.join([str(i + 1), s[i], '_', s[i], '_\t_', str(j + 1), '_\t_\t_\n'])
     return DepGraph(dependencygraph.DependencyGraph(tab))

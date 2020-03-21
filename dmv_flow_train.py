@@ -1,34 +1,32 @@
 from __future__ import print_function
 
-import os
 import argparse
-import time
-import sys
-import pickle
-
-import torch
 import numpy as np
+import os
+import pickle
+import sys
+import time
+import torch
 
 import modules.dmv_flow_model as dmv
 from modules import data_iter, \
-                    read_conll, \
-                    sents_to_vec, \
-                    sents_to_tagid, \
-                    to_input_tensor, \
-                    generate_seed
+    read_conll, \
+    sents_to_vec, \
+    sents_to_tagid, \
+    to_input_tensor, \
+    generate_seed
 
 
 def init_config():
-
     parser = argparse.ArgumentParser(description='dependency parsing')
 
     # train and test data
     parser.add_argument('--word_vec', type=str,
-        help='the word vector file (cPickle saved file)')
+                        help='the word vector file (cPickle saved file)')
     parser.add_argument('--train_file', type=str, help='train data')
     parser.add_argument('--test_file', default='', type=str, help='test data')
     parser.add_argument('--load_viterbi_dmv', type=str,
-        help='load pretrained DMV')
+                        help='load pretrained DMV')
 
     # optimization parameters
     parser.add_argument('--epochs', default=15, type=int, help='number of epochs')
@@ -39,28 +37,27 @@ def init_config():
     # model config
     parser.add_argument('--model', choices=['gaussian', 'nice'], default='gaussian')
     parser.add_argument('--couple_layers', default=8, type=int,
-        help='number of coupling layers in NICE')
+                        help='number of coupling layers in NICE')
     parser.add_argument('--cell_layers', default=1, type=int,
-        help='number of cell layers of ReLU net in each coupling layer')
+                        help='number of cell layers of ReLU net in each coupling layer')
     parser.add_argument('--hidden_units', default=50, type=int, help='hidden units in ReLU Net')
 
     # others
     parser.add_argument('--train_from', type=str, default='',
-        help='load a pre-trained checkpoint')
+                        help='load a pre-trained checkpoint')
     parser.add_argument('--seed', default=5783287, type=int, help='random seed')
     parser.add_argument('--set_seed', action='store_true', default=False,
-        help='if set seed')
+                        help='if set seed')
     parser.add_argument('--valid_nepoch', default=1, type=int,
-        help='valid every n epochs')
+                        help='valid every n epochs')
     parser.add_argument('--eval_all', action='store_true', default=False,
-        help='if true, the script would evaluate on all lengths after training')
+                        help='if true, the script would evaluate on all lengths after training')
 
     # these are for slurm purpose to save model
     # they can also be used to run multiple random restarts with various settings,
     # to save models that can be identified with ids
     parser.add_argument('--jobid', type=int, default=0, help='slurm job id')
     parser.add_argument('--taskid', type=int, default=0, help='slurm task id')
-
 
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
@@ -87,7 +84,6 @@ def init_config():
 
 
 def main(args):
-
     word_vec = pickle.load(open(args.word_vec, 'rb'))
     print('complete loading word vectors')
 
@@ -126,7 +122,7 @@ def main(args):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    log_niter = (len(train_emb)//args.batch_size)//5
+    log_niter = (len(train_emb) // args.batch_size) // 5
     report_ll = report_num_words = report_num_sents = epoch = train_iter = 0
     stop_avg_ll = stop_num_words = 0
     stop_avg_ll_last = 1
@@ -170,8 +166,8 @@ def main(args):
                 print('epoch %d, iter %d, ll_per_sent %.4f, ll_per_word %.4f, ' \
                       'max_var %.4f, min_var %.4f time elapsed %.2f sec' % \
                       (epoch, train_iter, report_ll / report_num_sents, \
-                      report_ll / report_num_words, model.var.data.max(), \
-                      model.var.data.min(), time.time() - begin_time), file=sys.stderr)
+                       report_ll / report_num_words, model.var.data.max(), \
+                       model.var.data.min(), time.time() - begin_time), file=sys.stderr)
 
             train_iter += 1
         if epoch % args.valid_nepoch == 0:
@@ -184,7 +180,7 @@ def main(args):
         rate = (stop_avg_ll - stop_avg_ll_last) / abs(stop_avg_ll_last)
 
         print('\n\nlikelihood: %.4f, likelihood last: %.4f, rate: %f\n' % \
-                (stop_avg_ll, stop_avg_ll_last, rate))
+              (stop_avg_ll, stop_avg_ll_last, rate))
 
         if rate < 0.001 and epoch >= 5:
             break

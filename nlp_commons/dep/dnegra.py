@@ -1,9 +1,9 @@
 # dnegra.py: Dependency trees of the NEGRA corpus.
 
-from nltk import tree
-
 import treebank
 from dep import depset
+from nltk import tree
+
 
 class Negra10(treebank.SavedTreebank):
     default_basedir = 'negra-corpus'
@@ -18,9 +18,9 @@ class Negra10(treebank.SavedTreebank):
             self.get_trees()
 
     def parsed(self):
-        f = open(self.basedir+'/negra-corpus.export')
+        f = open(self.basedir + '/negra-corpus.export')
         self.f = f
-        
+
         # go to first sentece
         s = f.readline()
         while not s.startswith('#BOS'):
@@ -32,11 +32,11 @@ class Negra10(treebank.SavedTreebank):
             sent = []
             l = f.readline().split()
             while l[0][0] != '#':
-                #if l[4] != '0':
+                # if l[4] != '0':
                 if not l[1].startswith('$'):
                     sent += [l]
                 l = f.readline().split()
-            
+
             parse = []
             while l[0] != '#EOS':
                 parse += [l]
@@ -49,7 +49,7 @@ class Negra10(treebank.SavedTreebank):
                 t2 = treebank.Tree(t, (num, origin))
                 t2.depset = tree_to_depset(t)
                 yield t2
-            
+
             s = f.readline()
 
 
@@ -89,7 +89,7 @@ def _build_tree(entries, root):
         t.edge = entry[3]
 
         # head-finding from http://maltparser.org/userguide.html:
-        (dir, plist) = head_rules['CAT:'+t.node]
+        (dir, plist) = head_rules['CAT:' + t.node]
         plist = plist + [('LEXICAL', '')]
         if dir == 'r':
             # we will reverse again later.
@@ -113,48 +113,48 @@ def _build_tree(entries, root):
         if dir == 'r':
             subtrees.reverse()
 
-        #if t.node == 'ROOT':
+        # if t.node == 'ROOT':
         #    print dir, plist, subtrees, head_st
 
         # mark head:
         t.head = subtrees.index(head_st)
-        t.node += '['+subtrees[t.head].node.split('[')[0]+']'
+        t.node += '[' + subtrees[t.head].node.split('[')[0] + ']'
 
         return t
 
 
 head_rules = \
-{'CAT:ROOT': ('l', []), \
- 'CAT:AA': ('r', [('LABEL', 'HD')]), \
- 'CAT:AP': ('r', [('LABEL', 'HD')]), \
- 'CAT:AVP': ('r', [('LABEL', 'HD'), ('CAT', 'AVP')]), \
- 'CAT:CAC': ('l', [('LABEL', 'CJ')]), \
- 'CAT:CAP': ('l', [('LABEL', 'CJ')]), \
- 'CAT:CAVP': ('l', [('LABEL', 'CJ')]), \
- 'CAT:CCP': ('l', [('LABEL', 'CJ')]), \
- 'CAT:CH': ('l', []), \
- 'CAT:CNP': ('l', [('LABEL', 'CJ')]), \
- 'CAT:CO': ('l', [('LABEL', 'CJ')]), \
- 'CAT:CPP': ('l', [('LABEL', 'CJ')]), \
- 'CAT:CS': ('l', [('LABEL', 'CJ')]), \
- 'CAT:CVP': ('l', [('LABEL', 'CJ')]), \
- 'CAT:CVZ': ('l', [('LABEL', 'CJ')]), \
- 'CAT:DL': ('l', [('LABEL', 'DH')]), \
- 'CAT:ISU': ('l', []), \
- 'CAT:NM': ('r', []), \
- 'CAT:NP': ('r', [('LABEL', 'NK')]), \
- # Malt says 'PN' (why?)
- 'CAT:MPN': ('l', []), \
- 'CAT:PP': ('r', [('LABEL', 'NK')]), \
- 'CAT:S': ('r', [('LABEL', 'HD')]), \
- 'CAT:VP': ('r', [('LABEL', 'HD')]), \
- 'CAT:VROOT': ('l', []), \
- # missing rules:
- # e.g. BOS 507:
- 'CAT:VZ': ('l', []), \
- # e.g. BOS 5576:
- 'CAT:MTA': ('l', []) \
- }
+    {'CAT:ROOT': ('l', []), \
+     'CAT:AA': ('r', [('LABEL', 'HD')]), \
+     'CAT:AP': ('r', [('LABEL', 'HD')]), \
+     'CAT:AVP': ('r', [('LABEL', 'HD'), ('CAT', 'AVP')]), \
+     'CAT:CAC': ('l', [('LABEL', 'CJ')]), \
+     'CAT:CAP': ('l', [('LABEL', 'CJ')]), \
+     'CAT:CAVP': ('l', [('LABEL', 'CJ')]), \
+     'CAT:CCP': ('l', [('LABEL', 'CJ')]), \
+     'CAT:CH': ('l', []), \
+     'CAT:CNP': ('l', [('LABEL', 'CJ')]), \
+     'CAT:CO': ('l', [('LABEL', 'CJ')]), \
+     'CAT:CPP': ('l', [('LABEL', 'CJ')]), \
+     'CAT:CS': ('l', [('LABEL', 'CJ')]), \
+     'CAT:CVP': ('l', [('LABEL', 'CJ')]), \
+     'CAT:CVZ': ('l', [('LABEL', 'CJ')]), \
+     'CAT:DL': ('l', [('LABEL', 'DH')]), \
+     'CAT:ISU': ('l', []), \
+     'CAT:NM': ('r', []), \
+     'CAT:NP': ('r', [('LABEL', 'NK')]), \
+     # Malt says 'PN' (why?)
+     'CAT:MPN': ('l', []), \
+     'CAT:PP': ('r', [('LABEL', 'NK')]), \
+     'CAT:S': ('r', [('LABEL', 'HD')]), \
+     'CAT:VP': ('r', [('LABEL', 'HD')]), \
+     'CAT:VROOT': ('l', []), \
+     # missing rules:
+     # e.g. BOS 507:
+     'CAT:VZ': ('l', []), \
+     # e.g. BOS 5576:
+     'CAT:MTA': ('l', []) \
+     }
 
 
 def tree_to_depset(t):
@@ -169,7 +169,7 @@ def tree_to_depset(t):
 def _tree_to_depset(t):
     """Helper for tree_to_depset. (Fue un dolor de huevos.)
     """
-    #if isinstance(t, str):
+    # if isinstance(t, str):
     #    return ([], [])
     if isinstance(t[0], str):
         return ([], t.start_index)
@@ -183,7 +183,7 @@ def _tree_to_depset(t):
         if t.head != -1:
             # resolve all unresolved dependencies:
             new_head = heads[t.head]
-            new_depset = [(i, (j==-1 and new_head) or j) for (i, j) in depset]
+            new_depset = [(i, (j == -1 and new_head) or j) for (i, j) in depset]
         else:
             # propagate unresolved dependencies
             new_head = -1
@@ -224,8 +224,8 @@ def build_tree2(sent, parse):
                     new_t.append(t)
                 # basic head-finding:
                 if edge == 'HD':
-                    new_t.head = len(new_t)-1
-                    new_t.node += '['+t.node+']'
+                    new_t.head = len(new_t) - 1
+                    new_t.node += '[' + t.node + ']'
                 """# head-finding from http://maltparser.org/userguide.html:
                 # (section "Phrase structure parsing")
                 elif hasattr(t, 'start_index') and new_t.head == -1:

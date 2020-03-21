@@ -4,24 +4,27 @@
 
 # rhead.py: RHEAD baseline for unsupervised dependency parsing.
 
-from dep import model
 from dep import depset
+from dep import model
+
 
 class RHead(model.DepModel):
     trained = True
     tested = True
-    
+
     def __init__(self, treebank=None):
         model.DepModel.__init__(self, treebank)
         self.Parse = [depset.rhead_depset(b.length) for b in self.Gold]
 
 
 def main():
-    print "WSJ10"
+    print
+    "WSJ10"
     import dep.dwsj
     tb = dep.dwsj.DepWSJ10()
     m = RHead(tb)
     m.eval()
+
 
 """
 from dep import rhead

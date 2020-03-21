@@ -4,16 +4,15 @@
 
 # -*- coding: iso-8859-1 -*-
 
-import os
 import itertools
-
+import os
+from functools import reduce
 from nltk import tree
 from nltk.corpus.reader import api
 from nltk.corpus.reader.api import SyntaxCorpusReader
 from nltk.util import LazyMap
 
 from . import util
-from functools import reduce
 
 
 class Tree(tree.Tree):
@@ -30,7 +29,7 @@ class Tree(tree.Tree):
 
         """
         tree.Tree.__init__(self, nltk_tree.label(), nltk_tree)
-        #TODO(junxian): to be optimized
+        # TODO(junxian): to be optimized
         # tree.ParentedTree.__init__(self, nltk_tree.label(),
         #                            [tree.ParentedTree.convert(child) \
         #                             for child in nltk_tree])
@@ -72,6 +71,7 @@ class Tree(tree.Tree):
                 return t.label()
             else:
                 return tree.Tree(t.label(), subtrees)
+
         t = recursion(self, f)
         if isinstance(t, tree.Tree):
             self.__init__(t, self.labels)
@@ -100,6 +100,7 @@ class Tree(tree.Tree):
     def filter_tags(self, tag_filter):
         """tag_filter must be a predicate function over strings.
         """
+
         def f(t):
             # t must be a tree, with leaves as words
             if t.height() > 2:
@@ -118,6 +119,7 @@ class Tree(tree.Tree):
             #     return not all_invalid
             # else:
             #     return tag_filter(t)
+
         self.filter_subtrees(f)
 
     def remove_punctuation(self):
@@ -129,6 +131,7 @@ class Tree(tree.Tree):
                 return not punctuation
             else:
                 return not self.is_punctuation(t)
+
         self.filter_subtrees(f)
 
     def is_punctuation(self, s):
@@ -145,6 +148,7 @@ class Tree(tree.Tree):
                 return not ellipsis
             else:
                 return not self.is_ellipsis(t)
+
         self.filter_subtrees(f)
 
     def is_ellipsis(self, s):
@@ -169,18 +173,18 @@ class Tree(tree.Tree):
             if queue == [] or queue[0][:-1] != p:
                 stack.pop()
                 print(p, "volviendo")
-            else: # queue[0] es hijo de p:
+            else:  # queue[0] es hijo de p:
                 q = queue.pop(0)
                 stack.append(q)
                 print(p, "yendo")
 
     def labelled_spannings(self, leaves=True, root=True, unary=True):
         queue = self.treepositions()
-        stack = [(queue.pop(0),0)]
+        stack = [(queue.pop(0), 0)]
         j = 0
         result = []
         while stack != []:
-            (p,i) = stack[-1]
+            (p, i) = stack[-1]
             if queue == [] or queue[0][:-1] != p:
                 # ya puedo devolver spanning de p:
                 if isinstance(self[p], tree.Tree):
@@ -188,28 +192,28 @@ class Tree(tree.Tree):
                 else:
                     # es una hoja:
                     if leaves:
-                        result += [(self[p], (i, i+1))]
-                    j = i+1
+                        result += [(self[p], (i, i + 1))]
+                    j = i + 1
                 stack.pop()
-            else: # queue[0] es el sgte. hijo de p:
+            else:  # queue[0] es el sgte. hijo de p:
                 q = queue.pop(0)
-                stack.append((q,j))
+                stack.append((q, j))
         if not root:
             # El spanning de la raiz siempre queda al final:
             result = result[0:-1]
         if not unary:
-            result = [l_i_j for l_i_j in result if l_i_j[1][0] != l_i_j[1][1]-1]
+            result = [l_i_j for l_i_j in result if l_i_j[1][0] != l_i_j[1][1] - 1]
         return result
 
     def spannings(self, leaves=True, root=True, unary=True):
         """Returns the set of unlabeled spannings.
         """
         queue = self.treepositions()
-        stack = [(queue.pop(0),0)]
+        stack = [(queue.pop(0), 0)]
         j = 0
         result = set()
         while stack != []:
-            (p,i) = stack[-1]
+            (p, i) = stack[-1]
             if queue == [] or queue[0][:-1] != p:
                 # ya puedo devolver spanning de p:
                 if isinstance(self[p], tree.Tree):
@@ -217,18 +221,18 @@ class Tree(tree.Tree):
                 else:
                     # es una hoja:
                     if leaves:
-                        result.add((i, i+1))
-                    j = i+1
+                        result.add((i, i + 1))
+                    j = i + 1
                 stack.pop()
-            else: # queue[0] es el sgte. hijo de p:
+            else:  # queue[0] es el sgte. hijo de p:
                 q = queue.pop(0)
-                stack.append((q,j))
+                stack.append((q, j))
         if not root:
             # FIXME: seguramente se puede programar mejor:
-            result.remove((0,len(self.leaves())))
+            result.remove((0, len(self.leaves())))
         if not unary:
             # FIXME: seguramente se puede programar mejor:
-            result = set([x_y for x_y in result if x_y[0] != x_y[1]-1])
+            result = set([x_y for x_y in result if x_y[0] != x_y[1] - 1])
         return result
 
     def spannings2(self, leaves=True, root=True, unary=True, order=None):
@@ -236,11 +240,11 @@ class Tree(tree.Tree):
         Meant to replace spannings in the future.
         """
         queue = self.treepositions(order)
-        stack = [(queue.pop(0),0)]
+        stack = [(queue.pop(0), 0)]
         j = 0
         result = set()
         while stack != []:
-            (p,i) = stack[-1]
+            (p, i) = stack[-1]
             if queue == [] or queue[0][:-1] != p:
                 # ya puedo devolver spanning de p:
                 if isinstance(self[p], tree.Tree):
@@ -248,18 +252,18 @@ class Tree(tree.Tree):
                 else:
                     # es una hoja:
                     if leaves:
-                        result.add((i, i+1))
-                    j = i+1
+                        result.add((i, i + 1))
+                    j = i + 1
                 stack.pop()
-            else: # queue[0] es el sgte. hijo de p:
+            else:  # queue[0] es el sgte. hijo de p:
                 q = queue.pop(0)
-                stack.append((q,j))
+                stack.append((q, j))
         if not root:
             # FIXME: seguramente se puede programar mejor:
-            result.remove((0,len(self.leaves())))
+            result.remove((0, len(self.leaves())))
         if not unary:
             # FIXME: seguramente se puede programar mejor:
-            result = set([x_y1 for x_y1 in result if x_y1[0] != x_y1[1]-1])
+            result = set([x_y1 for x_y1 in result if x_y1[0] != x_y1[1] - 1])
         return result
 
 
@@ -298,6 +302,7 @@ def labelled_measures(gold, parse):
             return j1 < i2 or j2 < i1 or \
                    (i2 <= i1 and j1 <= j2) or \
                    (i1 <= i2 and j2 <= j1)
+
         n = 0
         while n < len(gold_spans) and consistent(span, gold_spans[n]):
             n += 1
@@ -306,9 +311,9 @@ def labelled_measures(gold, parse):
 
     return {'labelled_precision': float(l_hits) / float(len(parse_spans)),
             'labelled_recall': float(l_hits) / float(len(gold_spans)),
-            #'bad_bracketed_precision': float(hits) / float(len(parse_spans)),
-            #'bad_bracketed_recall': float(hits) / float(len(gold_spans)),
-            #'bad_consistent_brackets_recall': float(cb) / float(len(gold_spans))
+            # 'bad_bracketed_precision': float(hits) / float(len(parse_spans)),
+            # 'bad_bracketed_recall': float(hits) / float(len(gold_spans)),
+            # 'bad_consistent_brackets_recall': float(cb) / float(len(gold_spans))
             }
 
 
@@ -335,6 +340,7 @@ def bracketed_measures(gold, parse):
             return j1 < i2 or j2 < i1 or \
                    (i2 <= i1 and j1 <= j2) or \
                    (i1 <= i2 and j2 <= j1)
+
         # XXX: si aparece algun not consistent puedo terminar.
         n = 0
         # XXX: no me gusta usar break.
@@ -357,10 +363,11 @@ def empty_measures():
             'labelled_recall': 0.0,
             'bracketed_recall': 0.0,
             'consistent_brackets_recall': 0.0,
-            #'bad_bracketed_precision': 0.0,
-            #'bad_bracketed_recall': 0.0,
-            #'bad_consistent_brackets_recall': 0.0
+            # 'bad_bracketed_precision': 0.0,
+            # 'bad_bracketed_recall': 0.0,
+            # 'bad_consistent_brackets_recall': 0.0
             }
+
 
 """def labelled_precision(gold, parse):
     return precision(gold, parse, labelled=True)
@@ -404,11 +411,11 @@ class Treebank(SyntaxCorpusReader):
 
     def sents(self):
         # LazyMap from nltk.util:
-        return LazyMap(lambda t: t.leaves(),  self.get_trees())
+        return LazyMap(lambda t: t.leaves(), self.get_trees())
 
     def tagged_sents(self):
         # LazyMap from nltk.util:
-        return LazyMap(lambda t: t.pos(),  self.get_trees())
+        return LazyMap(lambda t: t.pos(), self.get_trees())
 
     def parsed_sents(self):
         return self.get_trees()
@@ -423,7 +430,7 @@ class Treebank(SyntaxCorpusReader):
         list(map(lambda t: t.remove_leaves(), self.trees))
 
     def length_sort(self):
-        self.trees.sort(lambda x,y: cmp(len(x.leaves()), len(y.leaves())))
+        self.trees.sort(lambda x, y: cmp(len(x.leaves()), len(y.leaves())))
 
     def stats(self, filename=None):
         trees = self.trees
@@ -447,21 +454,22 @@ class Treebank(SyntaxCorpusReader):
 
     def print_stats(self, filename=None):
         (size, height, length) = self.stats(filename)
-        #print "Pares arbol oracion:", size
-        #print "Altura de arbol promedio:", height
-        #print "Largo de oracion promedio:", length
-        #print "Vocabulario:", len(self.get_vocabulary())
+        # print "Pares arbol oracion:", size
+        # print "Altura de arbol promedio:", height
+        # print "Largo de oracion promedio:", length
+        # print "Vocabulario:", len(self.get_vocabulary())
         print("Trees:", size)
         print("Average tree depth:", height)
         print("Average sentence length:", length)
         print("Vocabulary size:", len(self.get_vocabulary()))
 
     def get_productions(self):
-#        productions = []
-#        for t in self.trees:
-#            productions += t.productions()
+        #        productions = []
+        #        for t in self.trees:
+        #            productions += t.productions()
         def concat(l):
-            return reduce(lambda x,y: x + y, l)
+            return reduce(lambda x, y: x + y, l)
+
         productions = concat([t.productions() for t in self.trees])
         return productions
 
@@ -580,11 +588,11 @@ class SavedTreebank(Treebank):
             files = (files,)
 
         for file in files:
-            print("Parsing file "+file)
+            print("Parsing file " + file)
             path = os.path.join(self.basedir, file)
             s = open(path).read()
             # i = 0
-            for i,t in zip(itertools.count(), tokenize_paren(s)):
+            for i, t in zip(itertools.count(), tokenize_paren(s)):
                 yield Tree(tree.bracket_parse(t), [file, i])
                 # i += 1
 

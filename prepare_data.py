@@ -7,23 +7,25 @@
 # Distributed under terms of the MIT license.
 
 import argparse
+import os
 import requests
 import tarfile
-import os
+
 
 def download_file_from_google_drive(id, destination):
     URL = "https://docs.google.com/uc?export=download"
 
     session = requests.Session()
 
-    response = session.get(URL, params = { 'id' : id }, stream = True)
+    response = session.get(URL, params={'id': id}, stream=True)
     token = get_confirm_token(response)
 
     if token:
-        params = { 'id' : id, 'confirm' : token }
-        response = session.get(URL, params = params, stream = True)
+        params = {'id': id, 'confirm': token}
+        response = session.get(URL, params=params, stream=True)
 
     save_response_content(response, destination)
+
 
 def get_confirm_token(response):
     for key, value in response.cookies.items():
@@ -32,13 +34,15 @@ def get_confirm_token(response):
 
     return None
 
+
 def save_response_content(response, destination):
     CHUNK_SIZE = 32768
 
     with open(destination, "wb") as f:
         for chunk in response.iter_content(CHUNK_SIZE):
-            if chunk: # filter out keep-alive new chunks
+            if chunk:  # filter out keep-alive new chunks
                 f.write(chunk)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="data downloading")
@@ -55,4 +59,3 @@ if __name__ == "__main__":
         tar.extractall()
         tar.close()
         os.remove(destination)
-

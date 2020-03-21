@@ -1,16 +1,18 @@
 from __future__ import print_function
 
-import random
 import math
+import random
 
 from nltk import tree
-from .utils import stable_math_log
 
+from .utils import stable_math_log
 
 harmonic_constant = 2.0
 
-def add(dict, x, val):
-    dict[x] = dict.get(x, 0) + val
+
+def add(d, x, val):
+    d[x] = d.get(x, 0) + val
+
 
 class DMVDict(object):
     def __init__(self, d=None, default_val=math.log(0.1)):
@@ -49,6 +51,7 @@ def lplace_smooth(tita, count, tag_set, end_symbol, smth_const):
             count.add(('attach_right', h), smth_const)
             count.add(('attach_left', h), smth_const)
 
+
 class DMV(object):
     def __init__(self, args):
 
@@ -65,12 +68,11 @@ class DMV(object):
         tita, count = DMVDict(), DMVDict()
         # harmonic initializer
         lplace_smooth(tita, count, tag_set,
-            self.end_symbol, self.args.smth_const)
+                      self.end_symbol, self.args.smth_const)
         self.set_harmonic(True)
-        for i, s in enumerate(filter(lambda s: len(s) > 1, \
-                                    train_tags)):
+        for i, s in enumerate(filter(lambda s: len(s) > 1, train_tags)):
             if i % 1000 == 0:
-                print('initialize, sentence %d' % i)
+                print(f'initialize, sentence {i:d}')
             parse_tree, prob = self.dep_parse(s)
             self.MStep_s(parse_tree, tita, count)
         self.MStep(tita, count)
@@ -78,7 +80,7 @@ class DMV(object):
     @staticmethod
     def tree_to_depset(t):
         # add the root symbol (-1)
-        res = set([(t.label().index, -1)])
+        res = {(t.label().index, -1)}
         res.update(DMV._tree_to_depset(t))
         return sorted(res)
 
@@ -87,14 +89,14 @@ class DMV(object):
         node = t.label()
         index = node.index
         mark = node.mark
-        #res = set([(index, -1)])
+        # res = set([(index, -1)])
         # len(t) is the number of children
         if len(t) > 1:
             if mark == '<>':
                 arg = t[0]
             elif mark == '>':
                 arg = t[1]
-            res = set([(arg.label().index, index)])
+            res = {(arg.label().index, index)}
             res.update(DMV._tree_to_depset(t[0]), DMV._tree_to_depset(t[1]))
         else:
             if not isinstance(t[0], str):
@@ -117,7 +119,7 @@ class DMV(object):
             parse.append(self.tree_to_depset(self.parse(s)))
             if all_len:
                 if k % 10 == 0:
-                    print('parse %d trees' % k)
+                    print(f'parse {k:d} trees')
 
         cnt = 0
         dir_cnt = 0.0
@@ -134,14 +136,14 @@ class DMV(object):
         dir_acu = dir_cnt / cnt
         undir_acu = undir_cnt / cnt
 
-        return (dir_acu, undir_acu)
+        return dir_acu, undir_acu
 
     @staticmethod
     def measures(gold_s, parse_s):
         # Helper for eval().
         (d, u) = (0, 0)
         for (a, b) in gold_s:
-            (a, b) = (a-1, b-1)
+            (a, b) = (a - 1, b - 1)
             b1 = (a, b) in parse_s
             b2 = (b, a) in parse_s
             if b1:
@@ -150,7 +152,7 @@ class DMV(object):
             if b2:
                 u += 1.0
 
-        return (d, u)
+        return d, u
 
     def EStep(self, s):
         pio = self.p_inside_outside(s)
@@ -191,8 +193,6 @@ class DMV(object):
 
         return max(max_val_list)
 
-
-
     def _calc_stats(self, t, tita, count):
         node = t.label()
         index = node.index
@@ -206,7 +206,6 @@ class DMV(object):
             count.add(('stop_right', word, r_val == 0), 1)
         elif mark == '<>':
             count.add(('stop_left', word, l_val == 0), 1)
-
 
         if len(t) > 1:
             if mark == '<>':
@@ -237,7 +236,6 @@ class DMV(object):
         tita.add(('attach_left', t.label().word, h), 1)
         self._calc_stats(t, tita, count)
 
-
     def parse(self, s):
         t, w = self.dep_parse(s)
         return t
@@ -260,11 +258,11 @@ class DMV(object):
 
             parse[i, j] = ParseDict(self.unary_parses(math.log(1.0), t1, i, j))
 
-        for l in range(2, n+1):
-            for i in range(n-l+1):
+        for l in range(2, n + 1):
+            for i in range(n - l + 1):
                 j = i + l
                 parse_dict = ParseDict()
-                for k in range(i+1, j):
+                for k in range(i + 1, j):
                     for (p1, t1) in parse[i, k].itervalues():
                         for (p2, t2) in parse[k, j].itervalues():
                             n1 = t1.label()
@@ -289,15 +287,15 @@ class DMV(object):
                                 parse_dict.add(p, t)
 
                 parse[i, j] = ParseDict(sum((self.unary_parses(p, t, i, j) \
-                                    for (p, t) in parse_dict.itervalues()), []))
+                                             for (p, t) in parse_dict.itervalues()), []))
 
         w = s[0]
-        (p1, t1) = parse[0, n].val('|'+w+'0')
+        (p1, t1) = parse[0, n].val('|' + w + '0')
         t_max, p_max = t1, p1 + self.p_attach_left(w, self.end_symbol, self.harmonic)
         l = [(t_max, p_max)]
         for i in range(1, n):
             w = s[i]
-            (p1, t1) = parse[0, n].val('|'+w+str(i))
+            (p1, t1) = parse[0, n].val('|' + w + str(i))
             p = p1 + self.p_attach_left(w, self.end_symbol, self.harmonic)
             if p > p_max:
                 p_max = p
@@ -306,7 +304,7 @@ class DMV(object):
                 l += [(t1, p)]
         (t_max, p_max) = self.choice(l, self.args.choice)
 
-        return (t_max, p_max)
+        return t_max, p_max
 
     def choice(self, l, method):
         """
@@ -326,7 +324,7 @@ class DMV(object):
                     (t_min, p_min) = (t, p)
                     val_min = val
 
-            return (t_min, p_min)
+            return t_min, p_min
         elif method == 'bias_middle':
             (t_min, p_min) = l[0]
             min_dist = 10
@@ -336,7 +334,7 @@ class DMV(object):
                 if dist < min_dist:
                     (t_min, p_min) = (t, p)
                     min_dist = dist
-            return (t_min, p_min)
+            return t_min, p_min
         elif method == 'soft_bias_middle':
             new_list = [random.choice(l)]
             for (t, p) in l:
@@ -357,8 +355,6 @@ class DMV(object):
             return random.choice(new_list)
         elif method == 'bias_left':
             return l[0]
-
-
 
     def unary_parses(self, p, t, i, j):
         node = t.label()
@@ -382,7 +378,7 @@ class DMV(object):
             return stable_math_log(1.0 - math.exp(self.p_stop_left(w, val, harmonic)))
         except ValueError:
             print(math.exp(self.p_stop_left(w, val, harmonic)),
-                self.p_stop_left(w, val, harmonic))
+                  self.p_stop_left(w, val, harmonic))
 
     def p_nonstop_right(self, w, val, harmonic=False):
         return stable_math_log(1.0 - math.exp(self.p_stop_right(w, val, harmonic)))
@@ -429,8 +425,9 @@ class Node(object):
     def __eq__(self, other):
         if not isinstance(other, Node):
             return False
-        return (self.mark, self.word, self.index, self.l_val, self.r_val) \
-                == (other.mark, other.word, other.index, other.l_val, other.r_val)
+        lhs = self.mark, self.word, self.index, self.l_val, self.r_val
+        rhs = other.mark, other.word, other.index, other.l_val, other.r_val
+        return lhs == rhs
 
     def __str__(self):
         return str(self.mark) + str(self.word) + str(self.index)

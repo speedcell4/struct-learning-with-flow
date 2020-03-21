@@ -4,12 +4,10 @@
 
 # util.py: Some utilities, mainly for serialization (pickling) of objects.
 
+import nltk
 import os
 import pickle
 import sys
-
-import nltk
-
 
 obj_basedir = 'lq-nlp-commons'
 
@@ -34,20 +32,21 @@ def powerset(s):
     else:
         e = s[0]
         p = powerset(s[1:])
-        return p + [x+[e] for x in p]
+        return p + [x + [e] for x in p]
 
 
 # me fijo si un bracketing no tiene cosas que se cruzan
 def tree_consistent(b):
     """FIXME: move this to the bracketing package.
     """
+
     def crosses(xxx_todo_changeme, xxx_todo_changeme1):
-        (a,b) = xxx_todo_changeme
-        (c,d) = xxx_todo_changeme1
+        (a, b) = xxx_todo_changeme
+        (c, d) = xxx_todo_changeme1
         return (a < c and c < b and b < d) or (c < a and a < d and d < b)
 
     for i in range(len(b)):
-        for j in range(i+1,len(b)):
+        for j in range(i + 1, len(b)):
             if crosses(b[i], b[j]):
                 return False
     return True
@@ -90,7 +89,7 @@ def load_objs(filename):
         try:
             while True:
                 objects += [pickle.load(f)]
-        except EOFError: # It will always be thrown
+        except EOFError:  # It will always be thrown
             f.close()
     except IOError:
         objects = None
@@ -107,12 +106,12 @@ class ObjectSaver:
         try:
             while True:
                 self.orig_objs += [pickle.load(self.f)]
-        except EOFError: # It will always be thrown
+        except EOFError:  # It will always be thrown
             pass
-    
+
     def save_obj(self, object):
         pickle.dump(object, self.f, pickle.HIGHEST_PROTOCOL)
-        
+
     def flush(self):
         self.f.flush()
 
@@ -132,20 +131,19 @@ class Progress:
     >>> p.next()
       2 of 200
     """
-    
+
     def __init__(self, prefix, n_init, n_max):
         m = len(str(n_max))
-        o = "%"+str(m)+"d of "+str(n_max)
+        o = "%" + str(m) + "d of " + str(n_max)
         self.i = 0
         print(prefix, o % self.i, end=' ')
         sys.stdout.flush()
-        self.o = ("\b"*(2*m+5)) + o
+        self.o = ("\b" * (2 * m + 5)) + o
 
     def __next__(self):
         self.i += 1
         print(self.o % self.i, end=' ')
         sys.stdout.flush()
-
 
 # Recipe 364469: "Safe" Eval (Python) by Michael Spencer
 # ActiveState Code (http://code.activestate.com/recipes/364469/)

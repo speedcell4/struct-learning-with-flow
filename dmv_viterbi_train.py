@@ -1,24 +1,24 @@
 from __future__ import print_function
 
-import os
 import argparse
 import math
-import time
+import os
 import pickle
-
+import time
 from collections import namedtuple
-from modules import read_conll, get_tag_set
+
 import modules.dmv_viterbi_model as dmv
+from modules import read_conll, get_tag_set
+
 
 def init_config():
-
     parser = argparse.ArgumentParser(description='train dmv with viterbi EM')
 
     # hyperparams
     parser.add_argument('--stop_adj', default=0.3, type=float,
-        help='initial value for stop adjacent')
+                        help='initial value for stop adjacent')
     parser.add_argument('--smth_const', default=1, type=int,
-        help='laplace smooth parameter')
+                        help='laplace smooth parameter')
 
     # data input
     parser.add_argument('--train_file', type=str, help='train data path')
@@ -26,14 +26,14 @@ def init_config():
 
     # others
     parser.add_argument('--train_from', type=str, default='',
-        help='load a pre-trained checkpoint')
+                        help='load a pre-trained checkpoint')
     parser.add_argument('--choice', choices=['random', 'minival', 'bias_middle',
-        'soft_bias_middle', 'exclude_end', 'bias_left'], default='exclude_end',
-        help='tie breaking policy at initial stage')
+                                             'soft_bias_middle', 'exclude_end', 'bias_left'], default='exclude_end',
+                        help='tie breaking policy at initial stage')
     parser.add_argument('--valid_nepoch', default=1, type=int,
-        help='test every n iterations')
+                        help='test every n iterations')
     parser.add_argument('--epochs', default=10, type=int,
-        help='number of epochs')
+                        help='number of epochs')
 
     args = parser.parse_args()
 
@@ -49,8 +49,8 @@ def init_config():
 
     return args
 
-def main(args):
 
+def main(args):
     train_sents, _ = read_conll(args.train_file)
     test_sents, _ = read_conll(args.test_file, max_len=10)
 
@@ -87,7 +87,7 @@ def main(args):
         log_likelihood = 0.0
 
         for i, s in enumerate(filter(lambda s: len(s) > 1,
-                                    train_tags)):
+                                     train_tags)):
             if i % 1000 == 0:
                 print('epoch %d, sentence %d' % (epoch, i))
             parse_tree, prob = model.dep_parse(s)
@@ -96,7 +96,7 @@ def main(args):
 
         model.MStep(tita, count)
         print('\n\navg_log_likelihood:%.5f time elapsed: %.2f sec\n\n' % \
-               (log_likelihood / num_train, time.time() - begin_time))
+              (log_likelihood / num_train, time.time() - begin_time))
 
         if epoch % args.valid_nepoch == 0:
             directed, undirected = model.eval(test_deps, test_tags)

@@ -1,11 +1,13 @@
-import torch
-from collections import defaultdict
 import math
+from collections import defaultdict
+
 import numpy as np
-from math import log
+import torch
+
 
 class ConllSent(object):
     """docstring for ConllSent"""
+
     def __init__(self, key_list=["word", "tag", "head"]):
         super(ConllSent, self).__init__()
         self.sent_dict = {}
@@ -22,6 +24,7 @@ class ConllSent(object):
     def __len__(self):
         return len(self.sent_dict["word"])
 
+
 def is_number(s):
     try:
         float(s)
@@ -29,11 +32,13 @@ def is_number(s):
     except ValueError:
         return False
 
+
 def cast_to_int(s):
     try:
         return int(s)
     except ValueError:
         return s
+
 
 def word2id(sentences):
     """map words to word ids
@@ -45,6 +50,7 @@ def word2id(sentences):
     ids = defaultdict(lambda: len(ids))
     id_sents = [[ids[word] for word in sent] for sent in sentences]
     return id_sents, ids
+
 
 # Compute log sum exp in a numerically stable way for the forward algorithm
 def log_sum_exp(value, dim=None, keepdim=False):
@@ -62,6 +68,7 @@ def log_sum_exp(value, dim=None, keepdim=False):
         m = torch.max(value)
         sum_exp = torch.sum(torch.exp(value - m))
         return m + torch.log(sum_exp)
+
 
 def sents_to_vec(vec_dict, sentences):
     """read data, produce training data and labels.
@@ -81,6 +88,7 @@ def sents_to_vec(vec_dict, sentences):
 
     return embeddings
 
+
 def sents_to_tagid(sentences):
     """transform tagged sents to tagids,
     also return the look up table
@@ -88,6 +96,7 @@ def sents_to_tagid(sentences):
     ids = defaultdict(lambda: len(ids))
     id_sents = [[ids[tag] for tag in sent["tag"]] for sent in sentences]
     return id_sents, ids
+
 
 def read_conll(fname, max_len=1e3, rm_null=True, prc_num=True):
     sentences = []
@@ -100,8 +109,8 @@ def read_conll(fname, max_len=1e3, rm_null=True, prc_num=True):
         for line in fin:
             if line != '\n':
                 line = line.strip().split('\t')
-                sent["head"].append((int(line[0]), 
-                    cast_to_int(line[3])))
+                sent["head"].append((int(line[0]),
+                                     cast_to_int(line[3])))
                 if rm_null and line[2] == '-NONE-':
                     null_sent.append(loc)
                 else:
@@ -123,6 +132,7 @@ def read_conll(fname, max_len=1e3, rm_null=True, prc_num=True):
 
     return sentences, null_total
 
+
 def write_conll(fname, sentences, pred_tags, null_total):
     with open(fname, 'w') as fout:
         for (pred, null_sent, sent) in zip(pred_tags, null_total, sentences):
@@ -137,9 +147,10 @@ def write_conll(fname, sentences, pred_tags, null_total):
 
             for i in range(length):
                 fout.write("{}\t{}\t{}\t{}\n".format(
-                    i+1, word_list[i], pred_tag_list[i], 
+                    i + 1, word_list[i], pred_tag_list[i],
                     head_list[i][1]))
             fout.write('\n')
+
 
 def input_transpose(sents, pad):
     max_len = max(len(s) for s in sents)
@@ -153,6 +164,7 @@ def input_transpose(sents, pad):
 
     return sents_t, masks
 
+
 def to_input_tensor(sents, pad, device):
     """
     return a tensor of shape (src_sent_len, batch_size)
@@ -160,11 +172,11 @@ def to_input_tensor(sents, pad, device):
 
     sents, masks = input_transpose(sents, pad)
 
-
     sents_t = torch.tensor(sents, dtype=torch.float32, requires_grad=False, device=device)
     masks_t = torch.tensor(masks, dtype=torch.float32, requires_grad=False, device=device)
 
     return sents_t, masks_t
+
 
 def data_iter(data, batch_size, is_test=False, shuffle=True):
     index_arr = np.arange(len(data))
@@ -183,12 +195,12 @@ def data_iter(data, batch_size, is_test=False, shuffle=True):
             test_data = [data_tuple[0] for data_tuple in batch_data]
             tags = [data_tuple[1] for data_tuple in batch_data]
 
-
             yield test_data, tags
 
         else:
             # batch_data.sort(key=lambda e: -len(e))
             yield batch_data
+
 
 def generate_seed(data, size, shuffle=True):
     index_arr = np.arange(len(data))
@@ -201,16 +213,19 @@ def generate_seed(data, size, shuffle=True):
 
     return seed
 
+
 def get_tag_set(tag_list):
     tag_set = set()
     tag_set.update([x for s in tag_list for x in s])
     return tag_set
+
 
 def stable_math_log(val, default_val=-1e20):
     if val == 0:
         return default_val
 
     return math.log(val)
+
 
 def unravel_index(input, size):
     """Unravel the index of tensor given size

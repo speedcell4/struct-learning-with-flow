@@ -4,15 +4,16 @@
 
 
 from __future__ import absolute_import
+
+from . import depset
+from . import dwsj
+# from .. import model
+from .. import sentence, bracketing, model
+
+
 # dep/model.py: A general model for dependency parsing (class DepModel), and a
 # general model for projective dependency parsing, with evaluation also as
 # constituent trees.
-
-
-#from .. import model
-from .. import sentence, bracketing, model
-from . import depset
-from . import dwsj
 
 
 class DepModel(model.Model):
@@ -28,7 +29,7 @@ class DepModel(model.Model):
         for t in treebank.get_trees():
             s = sentence.Sentence(t.leaves())
             S += [s]
-            #Gold += [depset.deptree_to_depset(t)]
+            # Gold += [depset.deptree_to_depset(t)]
             Gold += [t.depset]
 
         self.S = S
@@ -62,11 +63,15 @@ class DepModel(model.Model):
         self.evaluated = True
 
         if output and not short:
-            print "Number of Trees:", len(Gold)
-            print "  Directed Accuracy: %2.1f" % (100*Directed)
-            print "  Undirected Accuracy: %2.1f" % (100*Undirected)
+            print
+            "Number of Trees:", len(Gold)
+            print
+            "  Directed Accuracy: %2.1f" % (100 * Directed)
+            print
+            "  Undirected Accuracy: %2.1f" % (100 * Undirected)
         elif output and short:
-            print "L =", Directed, "UL =", Undirected
+            print
+            "L =", Directed, "UL =", Undirected
 
         return self.evaluation
 
@@ -86,7 +91,7 @@ class DepModel(model.Model):
 
         return (n, d, u)
 
-    #def eval_stats(self, output=True, short=False, long=False, max_length=None):
+    # def eval_stats(self, output=True, short=False, long=False, max_length=None):
     def eval_stats(self, output=True, max_length=None):
         Gold, Parse = self.Gold, self.Parse
         gold_stats = {}
@@ -96,37 +101,43 @@ class DepModel(model.Model):
             l = Gold[i].length
             if (max_length is None or l <= max_length) \
                     and (self.count_length_2_1 or (self.count_length_2 and l == 2) or l >= 3):
-                #(count, directed, undirected) = self.measures(i)
-                #Count += count
-                #Directed += directed
-                #Undirected += undirected
+                # (count, directed, undirected) = self.measures(i)
+                # Count += count
+                # Directed += directed
+                # Undirected += undirected
                 s = self.S[i] + ['ROOT']
                 g, p = Gold[i].deps, Parse[i].deps
-                lg = [(s[i], s[j], i < j) for i,j in g]
-                lp = [(s[i], s[j], i < j) for i,j in p]
+                lg = [(s[i], s[j], i < j) for i, j in g]
+                lp = [(s[i], s[j], i < j) for i, j in p]
                 for x in lg:
                     gold_stats[x] = gold_stats.get(x, 0) + 1
                     stats[x] = stats.get(x, 0) - 1
                 for x in lp:
                     parse_stats[x] = parse_stats.get(x, 0) + 1
                     stats[x] = stats.get(x, 0) + 1
-        lstats = sorted(stats.iteritems(), key=lambda x:x[1])
+        lstats = sorted(stats.iteritems(), key=lambda x: x[1])
         if output:
             # a -> b iif b is head of a.
-            print 'Overproposals'
-            for ((d, h, left), n) in lstats[:len(lstats)-10:-1]:
+            print
+            'Overproposals'
+            for ((d, h, left), n) in lstats[:len(lstats) - 10:-1]:
                 if left:
-                    print '\t{0} -> {1}\t{2}'.format(d, h, n)
+                    print
+                    '\t{0} -> {1}\t{2}'.format(d, h, n)
                 else:
-                    print '\t{1} <- {0}\t{2}'.format(d, h, n)
-            print 'Underproposals'
+                    print
+                    '\t{1} <- {0}\t{2}'.format(d, h, n)
+            print
+            'Underproposals'
             for ((d, h, left), n) in lstats[:10]:
                 if left:
-                    print '\t{0} -> {1}\t{2}'.format(d, h, -n)
+                    print
+                    '\t{0} -> {1}\t{2}'.format(d, h, -n)
                 else:
-                    print '\t{1} <- {0}\t{2}'.format(d, h, -n)
+                    print
+                    '\t{1} <- {0}\t{2}'.format(d, h, -n)
 
-        #return (gold_stats, parse_stats)
+        # return (gold_stats, parse_stats)
         return lstats
 
 
@@ -134,6 +145,7 @@ class ProjDepModel(DepModel):
     """A general model for projective dependency parsing, with evaluation also
     as constituent trees.
     """
+
     def __init__(self, treebank=None, training_corpus=None):
         """
         The elements of the treebank must be trees with a DepSet in the
@@ -163,15 +175,15 @@ class ProjDepModel(DepModel):
         """
         # XXX: empezamos a lo bruto:
         self.bracketing_model.Parse = [bracketing.tree_to_bracketing(t) for t in self.Parse]
-        #dmvccm.DMVCCM.eval(self, output, short, long, max_length)
+        # dmvccm.DMVCCM.eval(self, output, short, long, max_length)
         self.bracketing_model.eval(output, short, long, max_length)
 
         # Ahora eval de dependencias:
         self.DepParse = self.Parse
         # type no anda porque devuelve instance:
-        #self.Parse = [type(self).tree_to_depset(t) for t in self.DepParse]
+        # self.Parse = [type(self).tree_to_depset(t) for t in self.DepParse]
         self.Parse = [self.__class__.tree_to_depset(t) for t in self.DepParse]
-        #model.DepModel.eval(self, output, short, long, max_length)
+        # model.DepModel.eval(self, output, short, long, max_length)
         DepModel.eval(self, output, short, long, max_length)
         self.Parse = self.DepParse
 
@@ -179,9 +191,9 @@ class ProjDepModel(DepModel):
         # Ahora eval de dependencias:
         self.DepParse = self.Parse
         # type no anda porque devuelve instance:
-        #self.Parse = [type(self).tree_to_depset(t) for t in self.DepParse]
+        # self.Parse = [type(self).tree_to_depset(t) for t in self.DepParse]
         self.Parse = [self.__class__.tree_to_depset(t) for t in self.DepParse]
-        #model.DepModel.eval(self, output, short, long, max_length)
+        # model.DepModel.eval(self, output, short, long, max_length)
         DepModel.eval_stats(self, output, max_length)
         self.Parse = self.DepParse
 
